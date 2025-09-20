@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileFusion | Local File Tools</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Feather Icons for UI -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- QR Code Generator Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Custom styles to complement Tailwind */
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; }
+        .drag-over { border-color: #3b82f6; background-color: #eff6ff; }
+        .dark .drag-over { background-color: #1e293b; }
+        .hidden-input { width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1; }
+        .icon { width: 24px; height: 24px; }
+        .tool-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            scroll-margin-top: 100px;
+        }
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .dark .tool-card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2); }
+        #qrcode-output canvas { margin: auto; border-radius: 0.5rem; }
+    </style>
+    <!-- Dark Mode Initializer Script -->
+    <script>
+        // This script runs immediately to prevent a flash of the wrong theme.
+        (function() {
+            const theme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (theme === 'dark' || (!theme && systemPrefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen dark:bg-slate-900 dark:text-slate-200">
+
+    <!-- Header Section with Navbar -->
+    <header class="bg-white shadow-sm sticky top-0 z-50 dark:bg-slate-800 dark:border-b dark:border-slate-700">
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22v-5m0 5H8.5a5.5 5.5 0 0 1-5-5.5V8.5a5.5 5.5 0 0 1 5.5-5h7a5.5 5.5 0 0 1 5.5 5v3.5a5.5 5.5 0 0 1-5 5.5H12Z"/><path d="M12 2v5"/><path d="M22 12h-5"/><path d="M2 12H7"/></svg>
+                <h1 class="text-2xl font-bold text-slate-800 dark:text-white">FileFusion</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="#pdf-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">PDF Tools</a>
+                    <a href="#image-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Image Tools</a>
+                    <a href="#converters" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Converters</a>
+                    <a href="#media-converter" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Media</a>
+                    <a href="#utilities" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Utilities</a>
+                    <a href="#about" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">About</a>
+                    <a href="#contact" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Contact</a>
+                </nav>
+                <button id="theme-toggle" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg p-2">
+                    <i data-feather="moon" id="theme-icon-light"></i>
+                    <i data-feather="sun" id="theme-icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 md:p-8 flex-grow">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-bold mb-2 dark:text-white">Powerful Tools, Total Privacy</h2>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto dark:text-slate-400">All processing happens directly in your browser. Your files never leave your computer.</p>
+        </div>
+
+        <!-- Tools Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- PDF Tools Section Anchor -->
+            <div id="pdf-tools" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+            <!-- PDF Merge Tool -->
+            <div id="pdf-merger" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="file-text" class="icon text-red-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Merge PDFs</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Combine multiple PDF files into one.</p>
+                <div class="mt-auto">
+                    <div id="pdf-merge-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="pdf-merge-input" class="hidden-input" multiple accept=".pdf">
+                        <label for="pdf-merge-input" class="cursor-pointer">
+                            <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                            <p class="mt-2 text-slate-600 dark:text-slate-300">Drop PDFs here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="pdf-merge-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- PDF Compress Tool -->
+            <div id="pdf-compressor" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="minimize-2" class="icon text-red-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Compress PDF</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Reduce PDF file size by optimizing its structure.</p>
+                <div class="mt-auto">
+                    <div id="pdf-compress-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="pdf-compress-input" class="hidden-input" accept=".pdf">
+                        <label for="pdf-compress-input" class="cursor-pointer">
+                            <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                            <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a PDF here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="pdf-compress-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+            
+            <!-- Image Tools Section Anchor -->
+            <div id="image-tools" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+            <!-- Image Compression & Resize Tool -->
+            <div id="image-compressor" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="image" class="icon text-green-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Compress & Resize Image</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Adjust dimensions and quality of your images.</p>
+                <div class="mt-auto">
+                    <div id="image-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="image-input" class="hidden-input" accept="image/jpeg,image/png,image/webp">
+                        <label for="image-input" class="cursor-pointer">
+                            <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                            <p class="mt-2 text-slate-600 dark:text-slate-300">Drop an image here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="image-options" class="hidden mt-4 space-y-4"></div>
+                    <div id="image-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Converters Section Anchor -->
+            <div id="converters" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+             <!-- Image Converter Tool -->
+            <div id="image-converter" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="refresh-cw" class="icon text-purple-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Image Converter</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Convert JPG to PNG or PDF format.</p>
+                <div class="mt-auto">
+                     <div id="image-convert-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="image-convert-input" class="hidden-input" accept="image/jpeg">
+                        <label for="image-convert-input" class="cursor-pointer">
+                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a JPG here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="image-convert-options" class="hidden mt-4 space-y-2"></div>
+                    <div id="image-convert-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- PDF to Word (Text) Tool -->
+            <div id="pdf-to-word" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="file-text" class="icon text-blue-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">PDF to Word (Text)</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Extract text from a PDF. Outputs a .txt file to copy into Word.</p>
+                <div class="mt-auto">
+                     <div id="pdf-to-word-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="pdf-to-word-input" class="hidden-input" accept=".pdf">
+                        <label for="pdf-to-word-input" class="cursor-pointer">
+                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a PDF here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="pdf-to-word-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+            
+            <!-- Media Conversion Tool Anchor -->
+            <div id="media-converter" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+            <!-- Media Conversion Tool -->
+            <div class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="film" class="icon text-orange-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Media Converter</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Convert video and audio files. Powered by FFMPEG.WASM.</p>
+                <div class="mt-auto">
+                     <div id="media-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="media-input" class="hidden-input" accept="audio/*,video/*">
+                        <label for="media-input" class="cursor-pointer">
+                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop media file here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="media-options" class="hidden mt-4 space-y-2"></div>
+                    <div id="media-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Utilities Section Anchor -->
+            <div id="utilities" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+             <!-- QR Code Generator -->
+            <div id="qrcode-generator" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="grid" class="icon text-cyan-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">QR Code Generator</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Generate a QR code from any text or URL.</p>
+                <div class="mt-auto">
+                    <textarea id="qrcode-input" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Enter text or URL here..."></textarea>
+                    <div id="qrcode-output" class="mt-4 bg-white p-4 rounded-md hidden"></div>
+                    <div id="qrcode-actions" class="hidden mt-2">
+                        <button id="qrcode-download" class="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">Download PNG</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hash Generator -->
+            <div id="hash-generator" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="hash" class="icon text-lime-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">File Hash Generator</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Calculate the SHA-256 hash of any file to verify its integrity.</p>
+                 <div class="mt-auto">
+                     <div id="hash-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
+                        <input type="file" id="hash-input" class="hidden-input">
+                        <label for="hash-input" class="cursor-pointer">
+                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
+                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a file here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
+                        </label>
+                    </div>
+                    <div id="hash-status" class="status mt-4 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- About Section Anchor -->
+            <div id="about" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+             <!-- About Section -->
+            <div class="tool-card bg-white p-6 rounded-xl shadow-md col-span-1 md:col-span-2 lg:col-span-3 dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="info" class="icon text-blue-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">About FileFusion</h3>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-lg font-semibold mb-2 dark:text-white">Your Privacy-First File Toolkit</h4>
+                        <p class="text-slate-600 dark:text-slate-400 mb-4">
+                            We believe that fundamental file tasks shouldn't require you to upload your personal data to unknown servers. FileFusion was built from the ground up to respect your privacy by leveraging the power of your own browser.
+                        </p>
+                        <p class="text-slate-600 dark:text-slate-400">
+                            Using cutting-edge technologies like WebAssembly (WASM), all processing is done locally on your machine. Whether you're a student, a professional, or just someone who needs to get things done quickly, FileFusion is your secure and reliable partner for everyday file management.
+                        </p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg dark:bg-slate-700/50">
+                        <h4 class="text-lg font-semibold mb-3 dark:text-white">Core Principles</h4>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <i data-feather="shield" class="h-5 w-5 text-green-500 mr-3 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <span class="font-semibold dark:text-slate-200">100% Client-Side</span>
+                                    <p class="text-slate-500 text-sm dark:text-slate-400">Your files are never uploaded. Total privacy guaranteed.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-feather="zap" class="h-5 w-5 text-yellow-500 mr-3 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <span class="font-semibold dark:text-slate-200">Blazing Fast</span>
+                                    <p class="text-slate-500 text-sm dark:text-slate-400">Operations run at the speed of your local machine, with no network latency.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-feather="package" class="h-5 w-5 text-indigo-500 mr-3 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <span class="font-semibold dark:text-slate-200">No Installation Needed</span>
+                                    <p class="text-slate-500 text-sm dark:text-slate-400">Works directly in any modern browser. Just open the file and go.</p>
+                                </div>
+                            </li>
+                             <li class="flex items-start">
+                                <i data-feather="wifi-off" class="h-5 w-5 text-red-500 mr-3 mt-1 flex-shrink-0"></i>
+                                <div>
+                                    <span class="font-semibold dark:text-slate-200">Offline Capable</span>
+                                    <p class="text-slate-500 text-sm dark:text-slate-400">Use all tools anytime, anywhere, even without an internet connection.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact/Feedback Section Anchor -->
+            <div id="contact" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
+            <!-- Feedback Section -->
+            <div id="feedback" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col md:col-span-2 dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="send" class="icon text-teal-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Send Feedback</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Have a suggestion or found a bug? This will open your default email client.</p>
+                <div class="mt-auto flex flex-col h-full">
+                   <textarea id="feedback-text" class="w-full flex-grow rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Your feedback..."></textarea>
+                    <a id="feedback-link" href="mailto:ay990351@gmail.com?subject=FileFusion Feedback" class="mt-4 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
+                        <i data-feather="mail" class="mr-2 h-4 w-4"></i>Send via Email
+                    </a>
+                </div>
+            </div>
+             <!-- Contact Section -->
+            <div class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
+                <div class="flex items-center mb-4">
+                    <i data-feather="user" class="icon text-indigo-500"></i>
+                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Contact Us</h3>
+                </div>
+                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Get in touch with the developer.</p>
+                <div class="mt-auto space-y-3">
+                    <a href="mailto:ay990351@gmail.com" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                        <i data-feather="mail" class="mr-2 h-4 w-4"></i>Email
+                    </a>
+                    <a href="https://www.linkedin.com/in/amityadav8467" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700">
+                        <i data-feather="linkedin" class="mr-2 h-4 w-4"></i>LinkedIn
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="text-center py-6 bg-white border-t border-slate-200 text-slate-500 text-sm mt-8 dark:bg-slate-800 dark:border-slate-700">
+        <p>&copy; <span id="copyright-year"></span> FileFusion. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Third-party libraries -->
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@2.11.338/build/pdf.min.js"></script>
+
+    <!-- Main Application Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const htmlEl = document.documentElement;
+            const themeToggle = document.getElementById('theme-toggle');
+            const lightIcon = document.getElementById('theme-icon-light');
+            const darkIcon = document.getElementById('theme-icon-dark');
+
+            // --- Dark Mode Logic ---
+            const updateThemeUI = () => {
+                if (htmlEl.classList.contains('dark')) {
+                    lightIcon.style.display = 'none';
+                    darkIcon.style.display = 'block';
+                } else {
+                    lightIcon.style.display = 'block';
+                    darkIcon.style.display = 'none';
+                }
+                feather.replace();
+            };
+
+            // Set initial UI state
+            updateThemeUI(); 
+
+            themeToggle.addEventListener('click', () => {
+                htmlEl.classList.toggle('dark');
+                localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+                updateThemeUI();
+            });
+
+            // Initialize other constants
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@2.11.338/build/pdf.worker.min.js';
+            document.getElementById('copyright-year').textContent = new Date().getFullYear();
+
+            // --- Helper Functions (Defined once at the top) ---
+            const createStatusElement = (parent, text, type = 'info') => {
+                const colors = { 
+                    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', 
+                    success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', 
+                    error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 
+                    progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' 
+                };
+                parent.innerHTML = `<div class="p-3 rounded-md ${colors[type]}">${text}</div>`;
+            };
+
+            const createDownloadButton = (parent, blob, filename) => {
+                const url = URL.createObjectURL(blob);
+                const originalSize = parent.dataset.originalSize ? `(from ${(parent.dataset.originalSize / 1024 / 1024).toFixed(2)} MB)` : '';
+                const newSize = (blob.size / 1024 / 1024).toFixed(3);
+                parent.innerHTML = `
+                    <div class="p-4 rounded-lg bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-700">
+                        <p class="font-semibold text-green-800 dark:text-green-200">Success! Your file is ready.</p>
+                        <p class="text-sm text-green-600 dark:text-green-400 mb-3">New size: ${newSize} MB ${originalSize}</p>
+                        <a href="${url}" download="${filename}" class="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                            <i data-feather="download" class="mr-2 h-4 w-4"></i>Download ${filename}
+                        </a>
+                        <button onclick="resetCard(this)" class="mt-2 w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Clear</button>
+                    </div>`;
+                feather.replace();
+            };
+            
+            let filesToMerge = [];
+            window.resetCard = (element) => {
+                const card = element.closest('.tool-card');
+                if (card.id === 'pdf-merger') filesToMerge = [];
+                if (card.id === 'qrcode-generator') {
+                    card.querySelector('#qrcode-output').innerHTML = '';
+                    card.querySelector('#qrcode-output').classList.add('hidden');
+                    card.querySelector('#qrcode-actions').classList.add('hidden');
+                }
+                card.querySelectorAll('.status, [id$="-options"]').forEach(el => { 
+                    el.innerHTML = ''; 
+                    if (el.id.includes('-options')) el.classList.add('hidden'); 
+                });
+                const input = card.querySelector('input[type="file"], textarea');
+                if (input) input.value = '';
+            };
+
+            const setupDragAndDrop = (dropzone, input) => {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }));
+                ['dragenter', 'dragover'].forEach(eventName => dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-over')));
+                ['dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-over')));
+                dropzone.addEventListener('drop', e => { 
+                    input.files = e.dataTransfer.files; 
+                    input.dispatchEvent(new Event('change', { bubbles: true })); 
+                });
+            };
+
+            window.copyToClipboard = (text) => {
+                navigator.clipboard.writeText(text).then(() => {
+                    // Optional: Show a "Copied!" message to the user.
+                });
+            };
+
+            // --- Feedback Logic ---
+            const feedbackText = document.getElementById('feedback-text');
+            const feedbackLink = document.getElementById('feedback-link');
+            feedbackText.addEventListener('input', () => {
+                const subject = "FileFusion Feedback";
+                const body = encodeURIComponent(feedbackText.value);
+                feedbackLink.href = `mailto:ay990351@gmail.com?subject=${subject}&body=${body}`;
+            });
+
+            // --- PDF Merger Logic ---
+            const pdfMergeInput = document.getElementById('pdf-merge-input');
+            const pdfMergeStatus = document.getElementById('pdf-merge-status');
+            setupDragAndDrop(document.getElementById('pdf-merge-dropzone'), pdfMergeInput);
+            const renderMergeList = () => {
+                if (filesToMerge.length === 0) {
+                    pdfMergeStatus.innerHTML = '';
+                    pdfMergeInput.value = '';
+                    return;
+                }
+                const fileListHTML = filesToMerge.map((file, index) => `
+                    <div class="flex items-center justify-between bg-slate-100 p-2 rounded-md dark:bg-slate-700">
+                        <span class="truncate text-slate-700 text-sm dark:text-slate-300">${file.name}</span>
+                        <button class="remove-file-btn text-slate-400 hover:text-red-600" data-index="${index}">
+                            <i data-feather="x-circle" class="h-5 w-5"></i>
+                        </button>
+                    </div>`).join('');
+                const mergeButtonHTML = filesToMerge.length >= 2
+                    ? `<button id="merge-btn" class="w-full mt-4 bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">Merge ${filesToMerge.length} Files</button>`
+                    : `<p class="text-center text-sm text-slate-500 mt-4 dark:text-slate-400">Add at least one more file.</p>`;
+                pdfMergeStatus.innerHTML = `<div class="space-y-2">${fileListHTML}</div>${mergeButtonHTML}`;
+                feather.replace();
+            };
+            pdfMergeStatus.addEventListener('click', (e) => {
+                const removeButton = e.target.closest('.remove-file-btn');
+                if (removeButton) {
+                    filesToMerge.splice(parseInt(removeButton.dataset.index, 10), 1);
+                    renderMergeList();
+                }
+                const mergeButton = e.target.closest('#merge-btn');
+                if (mergeButton) handlePdfMerge();
+            });
+            const handlePdfMerge = async () => {
+                createStatusElement(pdfMergeStatus, 'Merging PDFs...');
+                try {
+                    const { PDFDocument } = PDFLib;
+                    const mergedPdf = await PDFDocument.create();
+                    for (const file of filesToMerge) {
+                        const pdf = await PDFDocument.load(await file.arrayBuffer());
+                        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                        copiedPages.forEach(page => mergedPdf.addPage(page));
+                    }
+                    const blob = new Blob([await mergedPdf.save()], { type: 'application/pdf' });
+                    createDownloadButton(pdfMergeStatus, blob, 'merged.pdf');
+                    filesToMerge = [];
+                } catch (error) { createStatusElement(pdfMergeStatus, 'Error merging PDFs.', 'error'); }
+            };
+            pdfMergeInput.addEventListener('change', (e) => {
+                const newFiles = Array.from(e.target.files);
+                newFiles.forEach(newFile => {
+                    if (!filesToMerge.some(f => f.name === newFile.name && f.size === newFile.size)) {
+                        filesToMerge.push(newFile);
+                    }
+                });
+                renderMergeList();
+            });
+
+            // --- PDF Compressor Logic ---
+            const pdfCompressInput = document.getElementById('pdf-compress-input');
+            const pdfCompressStatus = document.getElementById('pdf-compress-status');
+            setupDragAndDrop(document.getElementById('pdf-compress-dropzone'), pdfCompressInput);
+            pdfCompressInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                pdfCompressStatus.innerHTML = `<button id="compress-pdf-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Compress ${file.name}</button>`;
+                document.getElementById('compress-pdf-btn').onclick = async () => {
+                    createStatusElement(pdfCompressStatus, 'Compressing PDF...');
+                    pdfCompressStatus.dataset.originalSize = file.size;
+                    try {
+                        const { PDFDocument } = PDFLib;
+                        const pdfDoc = await PDFDocument.load(await file.arrayBuffer());
+                        const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
+                        createDownloadButton(pdfCompressStatus, blob, `compressed-${file.name}`);
+                    } catch (error) { createStatusElement(pdfCompressStatus, 'Error compressing PDF.', 'error'); }
+                };
+            });
+            
+            // --- Image Compressor & Resizer Logic ---
+            const imageInput = document.getElementById('image-input');
+            const imageStatus = document.getElementById('image-status');
+            const imageOptions = document.getElementById('image-options');
+            setupDragAndDrop(document.getElementById('image-dropzone'), imageInput);
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        imageOptions.classList.remove('hidden');
+                        imageOptions.innerHTML = `
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label for="img-width" class="block text-sm font-medium dark:text-slate-300">Width (px)</label><input type="number" id="img-width" value="${img.width}" class="mt-1 block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600"></div>
+                                <div><label for="img-height" class="block text-sm font-medium dark:text-slate-300">Height (px)</label><input type="number" id="img-height" value="${img.height}" class="mt-1 block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600"></div>
+                            </div>
+                            <div><label for="img-quality" class="block text-sm font-medium dark:text-slate-300">Quality: <span id="quality-val">80</span>%</label><input type="range" id="img-quality" min="10" max="100" value="80" class="w-full h-2 bg-slate-200 rounded-lg cursor-pointer dark:bg-slate-600"></div>
+                            <div class="flex items-center"><input id="aspect-ratio" type="checkbox" checked class="h-4 w-4 text-blue-600 rounded"><label for="aspect-ratio" class="ml-2 block text-sm dark:text-slate-200">Maintain aspect ratio</label></div>
+                            <button id="process-image-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Process Image</button>`;
+                        const widthInput = document.getElementById('img-width'), heightInput = document.getElementById('img-height'), qualityInput = document.getElementById('img-quality'), qualityVal = document.getElementById('quality-val'), aspectCheckbox = document.getElementById('aspect-ratio'), ratio = img.width / img.height;
+                        qualityInput.oninput = () => qualityVal.textContent = qualityInput.value;
+                        widthInput.oninput = () => { if (aspectCheckbox.checked) heightInput.value = Math.round(widthInput.value / ratio); };
+                        heightInput.oninput = () => { if (aspectCheckbox.checked) widthInput.value = Math.round(heightInput.value * ratio); };
+                        document.getElementById('process-image-btn').onclick = () => {
+                            createStatusElement(imageStatus, 'Processing image...');
+                            imageStatus.dataset.originalSize = file.size;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = widthInput.value; canvas.height = heightInput.value;
+                            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                            canvas.toBlob(blob => createDownloadButton(imageStatus, blob, `processed-${file.name}`), file.type, qualityInput.value / 100);
+                        };
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // --- Image Converter Logic ---
+            const imageConvertInput = document.getElementById('image-convert-input');
+            const imageConvertStatus = document.getElementById('image-convert-status');
+            const imageConvertOptions = document.getElementById('image-convert-options');
+            setupDragAndDrop(document.getElementById('image-convert-dropzone'), imageConvertInput);
+            
+            imageConvertInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                imageConvertStatus.innerHTML = '';
+                imageConvertOptions.innerHTML = '';
+                imageConvertOptions.classList.remove('hidden');
+                
+                imageConvertOptions.innerHTML = `<p class="font-medium text-sm dark:text-slate-300">Convert "${file.name}" to:</p><div class="grid grid-cols-2 gap-2"><button data-format="png" class="conv-btn">PNG</button><button data-format="pdf" class="conv-btn">PDF</button></div>`;
+                
+                document.querySelectorAll('#image-converter .conv-btn').forEach(button => {
+                   button.classList.add('bg-blue-100', 'hover:bg-blue-200', 'text-blue-800', 'font-medium', 'py-2', 'px-4', 'rounded-md', 'dark:bg-blue-900/50', 'dark:hover:bg-blue-900', 'dark:text-blue-300');
+                   button.onclick = async () => {
+                       try {
+                           const format = button.dataset.format;
+                           createStatusElement(imageConvertStatus, `Converting to ${format.toUpperCase()}...`, 'progress');
+                           
+                           if (format === 'pdf') {
+                               const { PDFDocument } = PDFLib;
+                               const pdfDoc = await PDFDocument.create();
+                               const imageBytes = await file.arrayBuffer();
+                               const image = await pdfDoc.embedJpg(imageBytes);
+                               const page = pdfDoc.addPage([image.width, image.height]);
+                               page.drawImage(image, { width: image.width, height: image.height });
+                               const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
+                               createDownloadButton(imageConvertStatus, blob, `${file.name.split('.').slice(0, -1).join('.')}.pdf`);
+                           } else { // PNG
+                               const imageBitmap = await createImageBitmap(file);
+                               const canvas = document.createElement('canvas');
+                               canvas.width = imageBitmap.width;
+                               canvas.height = imageBitmap.height;
+                               const ctx = canvas.getContext('2d');
+                               ctx.drawImage(imageBitmap, 0, 0);
+                               canvas.toBlob(blob => {
+                                   if (blob) {
+                                       createDownloadButton(imageConvertStatus, blob, `${file.name.split('.').slice(0, -1).join('.')}.png`);
+                                   } else { throw new Error('Canvas toBlob failed'); }
+                               }, 'image/png');
+                           }
+                       } catch (error) {
+                           console.error("Image Conversion Error:", error);
+                           createStatusElement(imageConvertStatus, 'Failed to convert image.', 'error');
+                       }
+                   };
+                });
+            });
+
+            // --- PDF to Word (Text) Logic ---
+            const pdfToWordInput = document.getElementById('pdf-to-word-input');
+            const pdfToWordStatus = document.getElementById('pdf-to-word-status');
+            setupDragAndDrop(document.getElementById('pdf-to-word-dropzone'), pdfToWordInput);
+            pdfToWordInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0]; 
+                if (!file) return;
+                createStatusElement(pdfToWordStatus, 'Extracting text from PDF...', 'progress');
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ') + '\n\n';
+                    }
+                    const blob = new Blob([fullText], {type: 'text/plain;charset=utf-8'});
+                    // Note: Browser cannot create a .docx file directly with formatting. This provides a .txt file.
+                    createDownloadButton(pdfToWordStatus, blob, file.name.replace(/\.pdf$/i, '.txt'));
+                } catch(error) {
+                    console.error("PDF Text Extract Error:", error);
+                    createStatusElement(pdfToWordStatus, 'Could not extract text from PDF.', 'error');
+                }
+            });
+
+            // --- Media Converter Logic ---
+            const mediaInput = document.getElementById('media-input');
+            const mediaStatus = document.getElementById('media-status');
+            const mediaOptions = document.getElementById('media-options');
+            setupDragAndDrop(document.getElementById('media-dropzone'), mediaInput);
+            const { createFFmpeg, fetchFile } = FFmpeg;
+            const ffmpeg = createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+            mediaInput.addEventListener('change', (e) => {
+                 const file = e.target.files[0]; if (!file) return;
+                mediaStatus.innerHTML = ''; mediaOptions.innerHTML = '';
+                const isVideo = file.type.startsWith('video/'), isAudio = file.type.startsWith('audio/');
+                if (!isVideo && !isAudio) { createStatusElement(mediaStatus, 'Unsupported file type.', 'error'); return; }
+                mediaOptions.classList.remove('hidden');
+                mediaOptions.innerHTML = `<p class="font-medium dark:text-slate-300">Convert "${file.name}" to:</p><div class="flex flex-wrap gap-2">${ isVideo ? `<button data-format="mp4">MP4</button><button data-format="mp3">MP3 (Audio)</button><button data-format="gif">GIF</button>` : `<button data-format="mp3">MP3</button><button data-format="wav">WAV</button>`}</div>`;
+                document.querySelectorAll('#media-converter button').forEach(button => {
+                    button.classList.add('flex-1', 'bg-blue-100', 'hover:bg-blue-200', 'text-blue-800', 'font-medium', 'py-2', 'px-4', 'rounded-md', 'dark:bg-blue-900/50', 'dark:hover:bg-blue-900', 'dark:text-blue-300');
+                    button.onclick = () => handleMediaConversion(file, button.dataset.format);
+                });
+            });
+            const handleMediaConversion = async (file, format) => {
+                const outName = `${file.name.split('.').slice(0, -1).join('.')}.${format}`;
+                try {
+                    if (!ffmpeg.isLoaded()) { 
+                        createStatusElement(mediaStatus, 'Loading FFmpeg core...', 'progress');
+                        await ffmpeg.load(); 
+                    }
+                    ffmpeg.setProgress(({ ratio }) => { if (ratio < 1) createStatusElement(mediaStatus, `Converting... ${Math.round(ratio * 100)}%`, 'progress'); });
+                    createStatusElement(mediaStatus, 'Preparing file...', 'progress');
+                    ffmpeg.FS('writeFile', file.name, await fetchFile(file));
+                    const command = format === 'gif' ? ['-i', file.name, '-vf', 'fps=10,scale=320:-1:flags=lanczos', outName] : ['-i', file.name, outName];
+                    await ffmpeg.run(...command);
+                    const data = ffmpeg.FS('readFile', outName);
+                    const blob = new Blob([data.buffer], { type: file.type });
+                    mediaStatus.dataset.originalSize = file.size;
+                    createDownloadButton(mediaStatus, blob, outName);
+                } catch (error) { console.error(error); createStatusElement(mediaStatus, 'An error occurred during conversion.', 'error'); }
+            };
+
+            // --- QR Code Generator Logic ---
+            const qrCodeInput = document.getElementById('qrcode-input');
+            const qrCodeOutput = document.getElementById('qrcode-output');
+            const qrCodeActions = document.getElementById('qrcode-actions');
+            let qrCodeInstance = null;
+            qrCodeInput.addEventListener('input', () => {
+                const text = qrCodeInput.value.trim();
+                qrCodeOutput.innerHTML = '';
+                if (text) {
+                    qrCodeOutput.classList.remove('hidden');
+                    qrCodeActions.classList.remove('hidden');
+                    if(qrCodeInstance) {
+                        qrCodeInstance.makeCode(text);
+                    } else {
+                        qrCodeInstance = new QRCode(qrCodeOutput, { text: text, width: 200, height: 200 });
+                    }
+                } else {
+                    qrCodeOutput.classList.add('hidden');
+                    qrCodeActions.classList.add('hidden');
+                    qrCodeInstance = null;
+                }
+            });
+            document.getElementById('qrcode-download').addEventListener('click', () => {
+                const canvas = qrCodeOutput.querySelector('canvas');
+                if (canvas) {
+                    const link = document.createElement('a');
+                    link.download = 'qrcode.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }
+            });
+
+            // --- File Hash Generator Logic ---
+            const hashInput = document.getElementById('hash-input');
+            const hashStatus = document.getElementById('hash-status');
+            setupDragAndDrop(document.getElementById('hash-dropzone'), hashInput);
+            hashInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                createStatusElement(hashStatus, `Calculating SHA-256 for ${file.name}...`, 'progress');
+                try {
+                    const buffer = await file.arrayBuffer();
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    hashStatus.innerHTML = `
+                        <div class="p-3 rounded-md bg-slate-100 dark:bg-slate-700">
+                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">SHA-256 Hash:</p>
+                            <div class="flex items-center mt-2">
+                                <input type="text" readonly value="${hashHex}" class="w-full text-xs bg-white dark:bg-slate-800 rounded-l-md border-slate-300 dark:border-slate-600">
+                                <button onclick="copyToClipboard('${hashHex}')" class="bg-blue-600 text-white p-2 rounded-r-md hover:bg-blue-700">
+                                    <i data-feather="copy" class="h-4 w-4"></i>
+                                </button>
+                            </div>
+                        </div>`;
+                    feather.replace();
+                } catch (error) { createStatusElement(hashStatus, 'Error calculating file hash.', 'error'); }
+            });
+        });
+    </script>
+</body>
+</html>
+
+
