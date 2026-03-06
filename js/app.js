@@ -123,13 +123,16 @@ function setupDragAndDrop(dropzoneEl, inputEl) {
       dropzoneEl.classList.add('drag-over');
     })
   );
-  ['dragleave', 'drop'].forEach(evt =>
-    dropzoneEl.addEventListener(evt, e => {
-      e.preventDefault();
+  dropzoneEl.addEventListener('dragleave', e => {
+    // Only remove drag-over when the cursor truly leaves the drop zone,
+    // not when it moves between child elements inside it.
+    if (!dropzoneEl.contains(e.relatedTarget)) {
       dropzoneEl.classList.remove('drag-over');
-    })
-  );
+    }
+  });
   dropzoneEl.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzoneEl.classList.remove('drag-over');
     const files = e.dataTransfer.files;
     if (files.length && inputEl) {
       const dt = new DataTransfer();
@@ -138,7 +141,15 @@ function setupDragAndDrop(dropzoneEl, inputEl) {
       inputEl.dispatchEvent(new Event('change'));
     }
   });
-  dropzoneEl.addEventListener('click', () => inputEl && inputEl.click());
+  // Only trigger the file picker programmatically when the click target is
+  // outside a <label> element. Clicks inside a <label for="..."> already
+  // activate the associated input natively, so calling inputEl.click() again
+  // would open the file dialog twice and cause it to cancel itself.
+  dropzoneEl.addEventListener('click', e => {
+    if (inputEl && !e.target.closest('label')) {
+      inputEl.click();
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════

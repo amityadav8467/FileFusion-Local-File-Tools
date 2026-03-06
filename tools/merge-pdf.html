@@ -141,8 +141,15 @@
       const dz = document.getElementById('merge-dropzone');
       const inp = document.getElementById('merge-input');
       ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
-      ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
-      dz.addEventListener('drop', e => { Array.from(e.dataTransfer.files).forEach(f=>files.push(f)); renderList(); });
+      dz.addEventListener('dragleave', e => {
+        if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+      });
+      dz.addEventListener('drop', e => {
+        e.preventDefault();
+        dz.classList.remove('drag-over');
+        Array.from(e.dataTransfer.files).forEach(f => files.push(f));
+        renderList();
+      });
       inp.addEventListener('change', e => { Array.from(e.target.files).forEach(f=>files.push(f)); renderList(); });
 
       document.getElementById('merge-btn').addEventListener('click', async () => {

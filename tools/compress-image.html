@@ -156,14 +156,18 @@
       const dz = document.getElementById('ci-dropzone');
       const inp = document.getElementById('ci-input');
       ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
-      ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
+      dz.addEventListener('dragleave', e => {
+        if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+      });
       dz.addEventListener('drop', e => {
+        e.preventDefault();
+        dz.classList.remove('drag-over');
         const f = e.dataTransfer.files[0];
         if (!f) return;
         inp.files = e.dataTransfer.files;
         onFileChange(f);
       });
-      dz.addEventListener('click', () => inp.click());
+      dz.addEventListener('click', e => { if (!e.target.closest('label')) inp.click(); });
       inp.addEventListener('change', e => { if (e.target.files[0]) onFileChange(e.target.files[0]); });
 
       function onFileChange(file) {
