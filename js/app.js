@@ -795,9 +795,11 @@ function renderRenameList() {
     item.className = 'file-item flex-col sm:flex-row gap-2 mb-2';
     item.innerHTML = `
       <span class="text-xs text-slate-400 w-5">${idx + 1}.</span>
-      <input type="text" id="rename-name-${idx}" value="${escapeHtml(file.name)}"
+      <input type="text" id="rename-name-${idx}"
         class="flex-1 text-sm border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <span class="text-xs text-slate-400">${formatBytes(file.size)}</span>`;
+    const nameInput = item.querySelector(`#rename-name-${idx}`);
+    if (nameInput) nameInput.value = file.name;
     list.appendChild(item);
   });
 }
