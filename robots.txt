@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://amityadav8467.github.io/FileFusion-Local-File-Tools/sitemap.xml
