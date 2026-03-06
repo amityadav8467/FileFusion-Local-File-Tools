@@ -1,746 +1,944 @@
 <!DOCTYPE html>
 <html lang="en" class="">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FileFusion | Local File Tools</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Google Font: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Feather Icons for UI -->
-    <script src="https://unpkg.com/feather-icons"></script>
-    <!-- QR Code Generator Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        /* Custom styles to complement Tailwind */
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', sans-serif; }
-        .drag-over { border-color: #3b82f6; background-color: #eff6ff; }
-        .dark .drag-over { background-color: #1e293b; }
-        .hidden-input { width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1; }
-        .icon { width: 24px; height: 24px; }
-        .tool-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            scroll-margin-top: 100px;
-        }
-        .tool-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        .dark .tool-card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2); }
-        #qrcode-output canvas { margin: auto; border-radius: 0.5rem; }
-    </style>
-    <!-- Dark Mode Initializer Script -->
-    <script>
-        // This script runs immediately to prevent a flash of the wrong theme.
-        (function() {
-            const theme = localStorage.getItem('theme');
-            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (theme === 'dark' || (!theme && systemPrefersDark)) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        })();
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileFusion – Local File Tools</title>
+  <meta name="description" content="Free, privacy-first file tools. Merge PDFs, compress images, convert formats and more — all locally in your browser. No uploads, no accounts.">
+  <meta name="keywords" content="PDF merge, compress image, file converter, PDF tools, image tools, local processing, privacy">
+  <meta property="og:title" content="FileFusion – Local File Tools">
+  <meta property="og:description" content="Privacy-first file tools. All processing happens locally in your browser.">
+  <meta property="og:type" content="website">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Feather Icons -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+    integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+    crossorigin="anonymous"></script>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Dark Mode Initializer (must run before body renders) -->
+  <script>
+    (function() {
+      const t = localStorage.getItem('theme');
+      const sys = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (t === 'dark' || (!t && sys)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen dark:bg-slate-900 dark:text-slate-200">
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 flex flex-col min-h-screen">
 
-    <!-- Header Section with Navbar -->
-    <header class="bg-white shadow-sm sticky top-0 z-50 dark:bg-slate-800 dark:border-b dark:border-slate-700">
-        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22v-5m0 5H8.5a5.5 5.5 0 0 1-5-5.5V8.5a5.5 5.5 0 0 1 5.5-5h7a5.5 5.5 0 0 1 5.5 5v3.5a5.5 5.5 0 0 1-5 5.5H12Z"/><path d="M12 2v5"/><path d="M22 12h-5"/><path d="M2 12H7"/></svg>
-                <h1 class="text-2xl font-bold text-slate-800 dark:text-white">FileFusion</h1>
-            </div>
-            <div class="flex items-center space-x-6">
-                <nav class="hidden md:flex items-center space-x-6">
-                    <a href="#pdf-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">PDF Tools</a>
-                    <a href="#image-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Image Tools</a>
-                    <a href="#converters" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Converters</a>
-                    <a href="#media-converter" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Media</a>
-                    <a href="#utilities" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Utilities</a>
-                    <a href="#about" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">About</a>
-                    <a href="#contact" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400">Contact</a>
-                </nav>
-                <button id="theme-toggle" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg p-2">
-                    <i data-feather="moon" id="theme-icon-light"></i>
-                    <i data-feather="sun" id="theme-icon-dark"></i>
-                </button>
-            </div>
+<!-- ══════════════════════════════════════════
+     STICKY NAVBAR
+══════════════════════════════════════════ -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
+  <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22v-5m0 5H8.5a5.5 5.5 0 0 1-5-5.5V8.5a5.5 5.5 0 0 1 5.5-5h7a5.5 5.5 0 0 1 5.5 5v3.5a5.5 5.5 0 0 1-5 5.5H12Z"/><path d="M12 2v5"/><path d="M22 12h-5"/><path d="M2 12H7"/></svg>
+      <span class="text-xl font-bold text-slate-800 dark:text-white">FileFusion</span>
+    </a>
+
+    <!-- Desktop Nav -->
+    <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+      <a href="#pdf-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">PDF</a>
+      <a href="#image-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">Images</a>
+      <a href="#converter-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">Converters</a>
+      <a href="#utility-tools" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">Utilities</a>
+      <a href="#about" class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">About</a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <!-- Dark mode toggle -->
+      <button id="theme-toggle" aria-label="Toggle dark mode"
+        class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+        <i data-feather="moon" id="theme-icon-light"></i>
+        <i data-feather="sun" id="theme-icon-dark" style="display:none"></i>
+      </button>
+      <!-- Hamburger -->
+      <button id="hamburger-btn" aria-label="Menu"
+        class="md:hidden p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+        <i data-feather="menu"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-white dark:bg-slate-900 space-y-2 text-sm font-medium">
+    <a href="#pdf-tools" class="block py-2 text-slate-700 dark:text-slate-300 hover:text-blue-600">PDF Tools</a>
+    <a href="#image-tools" class="block py-2 text-slate-700 dark:text-slate-300 hover:text-blue-600">Image Tools</a>
+    <a href="#converter-tools" class="block py-2 text-slate-700 dark:text-slate-300 hover:text-blue-600">Converters</a>
+    <a href="#utility-tools" class="block py-2 text-slate-700 dark:text-slate-300 hover:text-blue-600">Utilities</a>
+    <a href="#about" class="block py-2 text-slate-700 dark:text-slate-300 hover:text-blue-600">About</a>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════
+     HERO SECTION
+══════════════════════════════════════════ -->
+<section class="hero-section py-20 md:py-28 text-center text-white relative">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="container mx-auto px-4 relative z-10">
+    <div class="mb-5">
+      <span class="privacy-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        100% Private – Files Never Leave Your Browser
+      </span>
+    </div>
+    <h1 class="text-4xl md:text-6xl font-extrabold mb-5 leading-tight">
+      Powerful File Tools,<br>
+      <span class="hero-gradient-text">Total Privacy</span>
+    </h1>
+    <p class="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-8">
+      Merge PDFs, compress images, convert formats, generate QR codes and more —
+      all processed locally in your browser. No sign-up, no uploads, no limits.
+    </p>
+    <div class="flex flex-wrap gap-4 justify-center">
+      <a href="#tools-dashboard"
+        class="px-7 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-blue-500/30 transition-all">
+        Start Using Tools
+      </a>
+      <a href="#about"
+        class="px-7 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/20 backdrop-blur-sm transition-all">
+        Learn More
+      </a>
+    </div>
+    <!-- Stats row -->
+    <div class="mt-12 flex flex-wrap gap-8 justify-center text-slate-300">
+      <div class="text-center"><div class="text-3xl font-bold text-white">17+</div><div class="text-sm">Tools</div></div>
+      <div class="text-center"><div class="text-3xl font-bold text-white">0</div><div class="text-sm">Uploads</div></div>
+      <div class="text-center"><div class="text-3xl font-bold text-white">Free</div><div class="text-sm">Forever</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════ -->
+<main class="flex-grow container mx-auto px-4 md:px-6 py-10" id="tools-dashboard">
+
+  <!-- ── PDF TOOLS ─────────────────────────────── -->
+  <section id="pdf-tools" class="mb-14 scroll-mt-20">
+    <div class="category-header">
+      <div class="category-icon bg-red-100 dark:bg-red-900/30">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 dark:text-white">PDF Tools</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="merge-pdf-panel">
+        <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-3">
+          <i data-feather="layers" class="w-5 h-5 text-red-500"></i>
         </div>
-    </header>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Merge PDFs</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Combine multiple PDF files into a single document.</p>
+      </div>
 
-    <!-- Main Content -->
-    <main class="container mx-auto p-4 md:p-8 flex-grow">
-        <div class="text-center mb-12">
-            <h2 class="text-4xl font-bold mb-2 dark:text-white">Powerful Tools, Total Privacy</h2>
-            <p class="text-lg text-slate-600 max-w-2xl mx-auto dark:text-slate-400">All processing happens directly in your browser. Your files never leave your computer.</p>
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="split-pdf-panel">
+        <div class="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mb-3">
+          <i data-feather="scissors" class="w-5 h-5 text-orange-500"></i>
         </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Split PDF</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Split a PDF into individual pages or custom ranges.</p>
+      </div>
 
-        <!-- Tools Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            
-            <!-- PDF Tools Section Anchor -->
-            <div id="pdf-tools" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-            <!-- PDF Merge Tool -->
-            <div id="pdf-merger" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="file-text" class="icon text-red-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Merge PDFs</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Combine multiple PDF files into one.</p>
-                <div class="mt-auto">
-                    <div id="pdf-merge-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="pdf-merge-input" class="hidden-input" multiple accept=".pdf">
-                        <label for="pdf-merge-input" class="cursor-pointer">
-                            <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                            <p class="mt-2 text-slate-600 dark:text-slate-300">Drop PDFs here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="pdf-merge-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-
-            <!-- PDF Compress Tool -->
-            <div id="pdf-compressor" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="minimize-2" class="icon text-red-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Compress PDF</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Reduce PDF file size by optimizing its structure.</p>
-                <div class="mt-auto">
-                    <div id="pdf-compress-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="pdf-compress-input" class="hidden-input" accept=".pdf">
-                        <label for="pdf-compress-input" class="cursor-pointer">
-                            <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                            <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a PDF here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="pdf-compress-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-            
-            <!-- Image Tools Section Anchor -->
-            <div id="image-tools" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-            <!-- Image Compression & Resize Tool -->
-            <div id="image-compressor" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="image" class="icon text-green-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Compress & Resize Image</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Adjust dimensions and quality of your images.</p>
-                <div class="mt-auto">
-                    <div id="image-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="image-input" class="hidden-input" accept="image/jpeg,image/png,image/webp">
-                        <label for="image-input" class="cursor-pointer">
-                            <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                            <p class="mt-2 text-slate-600 dark:text-slate-300">Drop an image here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="image-options" class="hidden mt-4 space-y-4"></div>
-                    <div id="image-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-
-            <!-- Converters Section Anchor -->
-            <div id="converters" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-             <!-- Image Converter Tool -->
-            <div id="image-converter" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="refresh-cw" class="icon text-purple-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Image Converter</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Convert JPG to PNG or PDF format.</p>
-                <div class="mt-auto">
-                     <div id="image-convert-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="image-convert-input" class="hidden-input" accept="image/jpeg">
-                        <label for="image-convert-input" class="cursor-pointer">
-                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a JPG here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="image-convert-options" class="hidden mt-4 space-y-2"></div>
-                    <div id="image-convert-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-
-            <!-- PDF to Word (Text) Tool -->
-            <div id="pdf-to-word" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="file-text" class="icon text-blue-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">PDF to Word (Text)</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Extract text from a PDF. Outputs a .txt file to copy into Word.</p>
-                <div class="mt-auto">
-                     <div id="pdf-to-word-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="pdf-to-word-input" class="hidden-input" accept=".pdf">
-                        <label for="pdf-to-word-input" class="cursor-pointer">
-                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a PDF here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="pdf-to-word-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-            
-            <!-- Media Conversion Tool Anchor -->
-            <div id="media-converter" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-            <!-- Media Conversion Tool -->
-            <div class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="film" class="icon text-orange-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Media Converter</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Convert video and audio files. Powered by FFMPEG.WASM.</p>
-                <div class="mt-auto">
-                     <div id="media-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="media-input" class="hidden-input" accept="audio/*,video/*">
-                        <label for="media-input" class="cursor-pointer">
-                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop media file here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="media-options" class="hidden mt-4 space-y-2"></div>
-                    <div id="media-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-
-            <!-- Utilities Section Anchor -->
-            <div id="utilities" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-             <!-- QR Code Generator -->
-            <div id="qrcode-generator" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="grid" class="icon text-cyan-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">QR Code Generator</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Generate a QR code from any text or URL.</p>
-                <div class="mt-auto">
-                    <textarea id="qrcode-input" class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Enter text or URL here..."></textarea>
-                    <div id="qrcode-output" class="mt-4 bg-white p-4 rounded-md hidden"></div>
-                    <div id="qrcode-actions" class="hidden mt-2">
-                        <button id="qrcode-download" class="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">Download PNG</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Hash Generator -->
-            <div id="hash-generator" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="hash" class="icon text-lime-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">File Hash Generator</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Calculate the SHA-256 hash of any file to verify its integrity.</p>
-                 <div class="mt-auto">
-                     <div id="hash-dropzone" class="drop-zone border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer dark:border-slate-600">
-                        <input type="file" id="hash-input" class="hidden-input">
-                        <label for="hash-input" class="cursor-pointer">
-                           <i data-feather="upload-cloud" class="mx-auto h-12 w-12 text-slate-400"></i>
-                           <p class="mt-2 text-slate-600 dark:text-slate-300">Drop a file here or <span class="font-semibold text-blue-600 dark:text-blue-400">browse</span></p>
-                        </label>
-                    </div>
-                    <div id="hash-status" class="status mt-4 text-sm"></div>
-                </div>
-            </div>
-
-            <!-- About Section Anchor -->
-            <div id="about" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-             <!-- About Section -->
-            <div class="tool-card bg-white p-6 rounded-xl shadow-md col-span-1 md:col-span-2 lg:col-span-3 dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="info" class="icon text-blue-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">About FileFusion</h3>
-                </div>
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <h4 class="text-lg font-semibold mb-2 dark:text-white">Your Privacy-First File Toolkit</h4>
-                        <p class="text-slate-600 dark:text-slate-400 mb-4">
-                            We believe that fundamental file tasks shouldn't require you to upload your personal data to unknown servers. FileFusion was built from the ground up to respect your privacy by leveraging the power of your own browser.
-                        </p>
-                        <p class="text-slate-600 dark:text-slate-400">
-                            Using cutting-edge technologies like WebAssembly (WASM), all processing is done locally on your machine. Whether you're a student, a professional, or just someone who needs to get things done quickly, FileFusion is your secure and reliable partner for everyday file management.
-                        </p>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-lg dark:bg-slate-700/50">
-                        <h4 class="text-lg font-semibold mb-3 dark:text-white">Core Principles</h4>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <i data-feather="shield" class="h-5 w-5 text-green-500 mr-3 mt-1 flex-shrink-0"></i>
-                                <div>
-                                    <span class="font-semibold dark:text-slate-200">100% Client-Side</span>
-                                    <p class="text-slate-500 text-sm dark:text-slate-400">Your files are never uploaded. Total privacy guaranteed.</p>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i data-feather="zap" class="h-5 w-5 text-yellow-500 mr-3 mt-1 flex-shrink-0"></i>
-                                <div>
-                                    <span class="font-semibold dark:text-slate-200">Blazing Fast</span>
-                                    <p class="text-slate-500 text-sm dark:text-slate-400">Operations run at the speed of your local machine, with no network latency.</p>
-                                </div>
-                            </li>
-                            <li class="flex items-start">
-                                <i data-feather="package" class="h-5 w-5 text-indigo-500 mr-3 mt-1 flex-shrink-0"></i>
-                                <div>
-                                    <span class="font-semibold dark:text-slate-200">No Installation Needed</span>
-                                    <p class="text-slate-500 text-sm dark:text-slate-400">Works directly in any modern browser. Just open the file and go.</p>
-                                </div>
-                            </li>
-                             <li class="flex items-start">
-                                <i data-feather="wifi-off" class="h-5 w-5 text-red-500 mr-3 mt-1 flex-shrink-0"></i>
-                                <div>
-                                    <span class="font-semibold dark:text-slate-200">Offline Capable</span>
-                                    <p class="text-slate-500 text-sm dark:text-slate-400">Use all tools anytime, anywhere, even without an internet connection.</p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Contact/Feedback Section Anchor -->
-            <div id="contact" class="col-span-1 md:col-span-2 lg:col-span-3 -mt-20 pt-20"></div>
-            <!-- Feedback Section -->
-            <div id="feedback" class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col md:col-span-2 dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="send" class="icon text-teal-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Send Feedback</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Have a suggestion or found a bug? This will open your default email client.</p>
-                <div class="mt-auto flex flex-col h-full">
-                   <textarea id="feedback-text" class="w-full flex-grow rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Your feedback..."></textarea>
-                    <a id="feedback-link" href="mailto:ay990351@gmail.com?subject=FileFusion Feedback" class="mt-4 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
-                        <i data-feather="mail" class="mr-2 h-4 w-4"></i>Send via Email
-                    </a>
-                </div>
-            </div>
-             <!-- Contact Section -->
-            <div class="tool-card bg-white p-6 rounded-xl shadow-md flex flex-col dark:bg-slate-800">
-                <div class="flex items-center mb-4">
-                    <i data-feather="user" class="icon text-indigo-500"></i>
-                    <h3 class="text-xl font-semibold ml-3 dark:text-white">Contact Us</h3>
-                </div>
-                <p class="text-slate-500 mb-4 flex-grow dark:text-slate-400">Get in touch with the developer.</p>
-                <div class="mt-auto space-y-3">
-                    <a href="mailto:ay990351@gmail.com" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i data-feather="mail" class="mr-2 h-4 w-4"></i>Email
-                    </a>
-                    <a href="https://www.linkedin.com/in/amityadav8467" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700">
-                        <i data-feather="linkedin" class="mr-2 h-4 w-4"></i>LinkedIn
-                    </a>
-                </div>
-            </div>
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="compress-pdf-panel">
+        <div class="w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mb-3">
+          <i data-feather="minimize-2" class="w-5 h-5 text-yellow-600"></i>
         </div>
-    </main>
-    
-    <!-- Footer -->
-    <footer class="text-center py-6 bg-white border-t border-slate-200 text-slate-500 text-sm mt-8 dark:bg-slate-800 dark:border-slate-700">
-        <p>&copy; <span id="copyright-year"></span> FileFusion. All Rights Reserved.</p>
-    </footer>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Compress PDF</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Reduce PDF file size while preserving quality.</p>
+      </div>
 
-    <!-- Third-party libraries -->
-    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
-    <script src="https://unpkg.com/pdfjs-dist@2.11.338/build/pdf.min.js"></script>
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="pdf-to-image-panel">
+        <div class="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mb-3">
+          <i data-feather="image" class="w-5 h-5 text-pink-500"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">PDF to Image</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Convert each PDF page to a PNG image file.</p>
+      </div>
 
-    <!-- Main Application Logic -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const htmlEl = document.documentElement;
-            const themeToggle = document.getElementById('theme-toggle');
-            const lightIcon = document.getElementById('theme-icon-light');
-            const darkIcon = document.getElementById('theme-icon-dark');
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="image-to-pdf-panel">
+        <div class="w-10 h-10 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mb-3">
+          <i data-feather="file-plus" class="w-5 h-5 text-rose-500"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Image to PDF</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Convert one or more images into a PDF document.</p>
+      </div>
 
-            // --- Dark Mode Logic ---
-            const updateThemeUI = () => {
-                if (htmlEl.classList.contains('dark')) {
-                    lightIcon.style.display = 'none';
-                    darkIcon.style.display = 'block';
-                } else {
-                    lightIcon.style.display = 'block';
-                    darkIcon.style.display = 'none';
-                }
-                feather.replace();
-            };
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="pdf-to-text-panel">
+        <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3">
+          <i data-feather="type" class="w-5 h-5 text-slate-600 dark:text-slate-300"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">PDF to Text</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Extract all text content from a PDF file.</p>
+      </div>
 
-            // Set initial UI state
-            updateThemeUI(); 
+    </div>
+  </section>
 
-            themeToggle.addEventListener('click', () => {
-                htmlEl.classList.toggle('dark');
-                localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
-                updateThemeUI();
-            });
+  <!-- ── IMAGE TOOLS ────────────────────────────── -->
+  <section id="image-tools" class="mb-14 scroll-mt-20">
+    <div class="category-header">
+      <div class="category-icon bg-green-100 dark:bg-green-900/30">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 dark:text-white">Image Tools</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            // Initialize other constants
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@2.11.338/build/pdf.worker.min.js';
-            document.getElementById('copyright-year').textContent = new Date().getFullYear();
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="compress-image-panel">
+        <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-3">
+          <i data-feather="minimize" class="w-5 h-5 text-green-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Compress Image</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Reduce image file size with quality control.</p>
+      </div>
 
-            // --- Helper Functions (Defined once at the top) ---
-            const createStatusElement = (parent, text, type = 'info') => {
-                const colors = { 
-                    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', 
-                    success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', 
-                    error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300', 
-                    progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300' 
-                };
-                parent.innerHTML = `<div class="p-3 rounded-md ${colors[type]}">${text}</div>`;
-            };
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="resize-image-panel">
+        <div class="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-3">
+          <i data-feather="maximize-2" class="w-5 h-5 text-teal-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Resize Image</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Resize images to specific dimensions with aspect ratio lock.</p>
+      </div>
 
-            const createDownloadButton = (parent, blob, filename) => {
-                const url = URL.createObjectURL(blob);
-                const originalSize = parent.dataset.originalSize ? `(from ${(parent.dataset.originalSize / 1024 / 1024).toFixed(2)} MB)` : '';
-                const newSize = (blob.size / 1024 / 1024).toFixed(3);
-                parent.innerHTML = `
-                    <div class="p-4 rounded-lg bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-700">
-                        <p class="font-semibold text-green-800 dark:text-green-200">Success! Your file is ready.</p>
-                        <p class="text-sm text-green-600 dark:text-green-400 mb-3">New size: ${newSize} MB ${originalSize}</p>
-                        <a href="${url}" download="${filename}" class="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                            <i data-feather="download" class="mr-2 h-4 w-4"></i>Download ${filename}
-                        </a>
-                        <button onclick="resetCard(this)" class="mt-2 w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Clear</button>
-                    </div>`;
-                feather.replace();
-            };
-            
-            let filesToMerge = [];
-            window.resetCard = (element) => {
-                const card = element.closest('.tool-card');
-                if (card.id === 'pdf-merger') filesToMerge = [];
-                if (card.id === 'qrcode-generator') {
-                    card.querySelector('#qrcode-output').innerHTML = '';
-                    card.querySelector('#qrcode-output').classList.add('hidden');
-                    card.querySelector('#qrcode-actions').classList.add('hidden');
-                }
-                card.querySelectorAll('.status, [id$="-options"]').forEach(el => { 
-                    el.innerHTML = ''; 
-                    if (el.id.includes('-options')) el.classList.add('hidden'); 
-                });
-                const input = card.querySelector('input[type="file"], textarea');
-                if (input) input.value = '';
-            };
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="png-to-jpg-panel">
+        <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
+          <i data-feather="refresh-cw" class="w-5 h-5 text-blue-500"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">PNG to JPG</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Convert PNG images to JPG with background color option.</p>
+      </div>
 
-            const setupDragAndDrop = (dropzone, input) => {
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }));
-                ['dragenter', 'dragover'].forEach(eventName => dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-over')));
-                ['dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-over')));
-                dropzone.addEventListener('drop', e => { 
-                    input.files = e.dataTransfer.files; 
-                    input.dispatchEvent(new Event('change', { bubbles: true })); 
-                });
-            };
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="jpg-to-png-panel">
+        <div class="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-3">
+          <i data-feather="refresh-ccw" class="w-5 h-5 text-indigo-500"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">JPG to PNG</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Convert JPG images to lossless PNG format.</p>
+      </div>
 
-            window.copyToClipboard = (text) => {
-                navigator.clipboard.writeText(text).then(() => {
-                    // Optional: Show a "Copied!" message to the user.
-                });
-            };
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="image-converter-panel">
+        <div class="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-3">
+          <i data-feather="sliders" class="w-5 h-5 text-violet-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Image Converter</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Convert images between PNG, JPG, and PDF formats.</p>
+      </div>
 
-            // --- Feedback Logic ---
-            const feedbackText = document.getElementById('feedback-text');
-            const feedbackLink = document.getElementById('feedback-link');
-            feedbackText.addEventListener('input', () => {
-                const subject = "FileFusion Feedback";
-                const body = encodeURIComponent(feedbackText.value);
-                feedbackLink.href = `mailto:ay990351@gmail.com?subject=${subject}&body=${body}`;
-            });
+    </div>
+  </section>
 
-            // --- PDF Merger Logic ---
-            const pdfMergeInput = document.getElementById('pdf-merge-input');
-            const pdfMergeStatus = document.getElementById('pdf-merge-status');
-            setupDragAndDrop(document.getElementById('pdf-merge-dropzone'), pdfMergeInput);
-            const renderMergeList = () => {
-                if (filesToMerge.length === 0) {
-                    pdfMergeStatus.innerHTML = '';
-                    pdfMergeInput.value = '';
-                    return;
-                }
-                const fileListHTML = filesToMerge.map((file, index) => `
-                    <div class="flex items-center justify-between bg-slate-100 p-2 rounded-md dark:bg-slate-700">
-                        <span class="truncate text-slate-700 text-sm dark:text-slate-300">${file.name}</span>
-                        <button class="remove-file-btn text-slate-400 hover:text-red-600" data-index="${index}">
-                            <i data-feather="x-circle" class="h-5 w-5"></i>
-                        </button>
-                    </div>`).join('');
-                const mergeButtonHTML = filesToMerge.length >= 2
-                    ? `<button id="merge-btn" class="w-full mt-4 bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">Merge ${filesToMerge.length} Files</button>`
-                    : `<p class="text-center text-sm text-slate-500 mt-4 dark:text-slate-400">Add at least one more file.</p>`;
-                pdfMergeStatus.innerHTML = `<div class="space-y-2">${fileListHTML}</div>${mergeButtonHTML}`;
-                feather.replace();
-            };
-            pdfMergeStatus.addEventListener('click', (e) => {
-                const removeButton = e.target.closest('.remove-file-btn');
-                if (removeButton) {
-                    filesToMerge.splice(parseInt(removeButton.dataset.index, 10), 1);
-                    renderMergeList();
-                }
-                const mergeButton = e.target.closest('#merge-btn');
-                if (mergeButton) handlePdfMerge();
-            });
-            const handlePdfMerge = async () => {
-                createStatusElement(pdfMergeStatus, 'Merging PDFs...');
-                try {
-                    const { PDFDocument } = PDFLib;
-                    const mergedPdf = await PDFDocument.create();
-                    for (const file of filesToMerge) {
-                        const pdf = await PDFDocument.load(await file.arrayBuffer());
-                        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-                        copiedPages.forEach(page => mergedPdf.addPage(page));
-                    }
-                    const blob = new Blob([await mergedPdf.save()], { type: 'application/pdf' });
-                    createDownloadButton(pdfMergeStatus, blob, 'merged.pdf');
-                    filesToMerge = [];
-                } catch (error) { createStatusElement(pdfMergeStatus, 'Error merging PDFs.', 'error'); }
-            };
-            pdfMergeInput.addEventListener('change', (e) => {
-                const newFiles = Array.from(e.target.files);
-                newFiles.forEach(newFile => {
-                    if (!filesToMerge.some(f => f.name === newFile.name && f.size === newFile.size)) {
-                        filesToMerge.push(newFile);
-                    }
-                });
-                renderMergeList();
-            });
+  <!-- ── CONVERTER & MEDIA TOOLS ───────────────── -->
+  <section id="converter-tools" class="mb-14 scroll-mt-20">
+    <div class="category-header">
+      <div class="category-icon bg-purple-100 dark:bg-purple-900/30">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 dark:text-white">Media Converter</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            // --- PDF Compressor Logic ---
-            const pdfCompressInput = document.getElementById('pdf-compress-input');
-            const pdfCompressStatus = document.getElementById('pdf-compress-status');
-            setupDragAndDrop(document.getElementById('pdf-compress-dropzone'), pdfCompressInput);
-            pdfCompressInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                pdfCompressStatus.innerHTML = `<button id="compress-pdf-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Compress ${file.name}</button>`;
-                document.getElementById('compress-pdf-btn').onclick = async () => {
-                    createStatusElement(pdfCompressStatus, 'Compressing PDF...');
-                    pdfCompressStatus.dataset.originalSize = file.size;
-                    try {
-                        const { PDFDocument } = PDFLib;
-                        const pdfDoc = await PDFDocument.load(await file.arrayBuffer());
-                        const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
-                        createDownloadButton(pdfCompressStatus, blob, `compressed-${file.name}`);
-                    } catch (error) { createStatusElement(pdfCompressStatus, 'Error compressing PDF.', 'error'); }
-                };
-            });
-            
-            // --- Image Compressor & Resizer Logic ---
-            const imageInput = document.getElementById('image-input');
-            const imageStatus = document.getElementById('image-status');
-            const imageOptions = document.getElementById('image-options');
-            setupDragAndDrop(document.getElementById('image-dropzone'), imageInput);
-            imageInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        imageOptions.classList.remove('hidden');
-                        imageOptions.innerHTML = `
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label for="img-width" class="block text-sm font-medium dark:text-slate-300">Width (px)</label><input type="number" id="img-width" value="${img.width}" class="mt-1 block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600"></div>
-                                <div><label for="img-height" class="block text-sm font-medium dark:text-slate-300">Height (px)</label><input type="number" id="img-height" value="${img.height}" class="mt-1 block w-full rounded-md border-slate-300 dark:bg-slate-700 dark:border-slate-600"></div>
-                            </div>
-                            <div><label for="img-quality" class="block text-sm font-medium dark:text-slate-300">Quality: <span id="quality-val">80</span>%</label><input type="range" id="img-quality" min="10" max="100" value="80" class="w-full h-2 bg-slate-200 rounded-lg cursor-pointer dark:bg-slate-600"></div>
-                            <div class="flex items-center"><input id="aspect-ratio" type="checkbox" checked class="h-4 w-4 text-blue-600 rounded"><label for="aspect-ratio" class="ml-2 block text-sm dark:text-slate-200">Maintain aspect ratio</label></div>
-                            <button id="process-image-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Process Image</button>`;
-                        const widthInput = document.getElementById('img-width'), heightInput = document.getElementById('img-height'), qualityInput = document.getElementById('img-quality'), qualityVal = document.getElementById('quality-val'), aspectCheckbox = document.getElementById('aspect-ratio'), ratio = img.width / img.height;
-                        qualityInput.oninput = () => qualityVal.textContent = qualityInput.value;
-                        widthInput.oninput = () => { if (aspectCheckbox.checked) heightInput.value = Math.round(widthInput.value / ratio); };
-                        heightInput.oninput = () => { if (aspectCheckbox.checked) widthInput.value = Math.round(heightInput.value * ratio); };
-                        document.getElementById('process-image-btn').onclick = () => {
-                            createStatusElement(imageStatus, 'Processing image...');
-                            imageStatus.dataset.originalSize = file.size;
-                            const canvas = document.createElement('canvas');
-                            canvas.width = widthInput.value; canvas.height = heightInput.value;
-                            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                            canvas.toBlob(blob => createDownloadButton(imageStatus, blob, `processed-${file.name}`), file.type, qualityInput.value / 100);
-                        };
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="media-converter-panel">
+        <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-3">
+          <i data-feather="film" class="w-5 h-5 text-purple-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Media Converter</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Convert audio/video files between formats using FFmpeg.</p>
+      </div>
 
-            // --- Image Converter Logic ---
-            const imageConvertInput = document.getElementById('image-convert-input');
-            const imageConvertStatus = document.getElementById('image-convert-status');
-            const imageConvertOptions = document.getElementById('image-convert-options');
-            setupDragAndDrop(document.getElementById('image-convert-dropzone'), imageConvertInput);
-            
-            imageConvertInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+    </div>
+  </section>
 
-                imageConvertStatus.innerHTML = '';
-                imageConvertOptions.innerHTML = '';
-                imageConvertOptions.classList.remove('hidden');
-                
-                imageConvertOptions.innerHTML = `<p class="font-medium text-sm dark:text-slate-300">Convert "${file.name}" to:</p><div class="grid grid-cols-2 gap-2"><button data-format="png" class="conv-btn">PNG</button><button data-format="pdf" class="conv-btn">PDF</button></div>`;
-                
-                document.querySelectorAll('#image-converter .conv-btn').forEach(button => {
-                   button.classList.add('bg-blue-100', 'hover:bg-blue-200', 'text-blue-800', 'font-medium', 'py-2', 'px-4', 'rounded-md', 'dark:bg-blue-900/50', 'dark:hover:bg-blue-900', 'dark:text-blue-300');
-                   button.onclick = async () => {
-                       try {
-                           const format = button.dataset.format;
-                           createStatusElement(imageConvertStatus, `Converting to ${format.toUpperCase()}...`, 'progress');
-                           
-                           if (format === 'pdf') {
-                               const { PDFDocument } = PDFLib;
-                               const pdfDoc = await PDFDocument.create();
-                               const imageBytes = await file.arrayBuffer();
-                               const image = await pdfDoc.embedJpg(imageBytes);
-                               const page = pdfDoc.addPage([image.width, image.height]);
-                               page.drawImage(image, { width: image.width, height: image.height });
-                               const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
-                               createDownloadButton(imageConvertStatus, blob, `${file.name.split('.').slice(0, -1).join('.')}.pdf`);
-                           } else { // PNG
-                               const imageBitmap = await createImageBitmap(file);
-                               const canvas = document.createElement('canvas');
-                               canvas.width = imageBitmap.width;
-                               canvas.height = imageBitmap.height;
-                               const ctx = canvas.getContext('2d');
-                               ctx.drawImage(imageBitmap, 0, 0);
-                               canvas.toBlob(blob => {
-                                   if (blob) {
-                                       createDownloadButton(imageConvertStatus, blob, `${file.name.split('.').slice(0, -1).join('.')}.png`);
-                                   } else { throw new Error('Canvas toBlob failed'); }
-                               }, 'image/png');
-                           }
-                       } catch (error) {
-                           console.error("Image Conversion Error:", error);
-                           createStatusElement(imageConvertStatus, 'Failed to convert image.', 'error');
-                       }
-                   };
-                });
-            });
+  <!-- ── UTILITY TOOLS ──────────────────────────── -->
+  <section id="utility-tools" class="mb-14 scroll-mt-20">
+    <div class="category-header">
+      <div class="category-icon bg-amber-100 dark:bg-amber-900/30">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 dark:text-white">Utilities</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            // --- PDF to Word (Text) Logic ---
-            const pdfToWordInput = document.getElementById('pdf-to-word-input');
-            const pdfToWordStatus = document.getElementById('pdf-to-word-status');
-            setupDragAndDrop(document.getElementById('pdf-to-word-dropzone'), pdfToWordInput);
-            pdfToWordInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0]; 
-                if (!file) return;
-                createStatusElement(pdfToWordStatus, 'Extracting text from PDF...', 'progress');
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                    let fullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        fullText += textContent.items.map(item => item.str).join(' ') + '\n\n';
-                    }
-                    const blob = new Blob([fullText], {type: 'text/plain;charset=utf-8'});
-                    // Note: Browser cannot create a .docx file directly with formatting. This provides a .txt file.
-                    createDownloadButton(pdfToWordStatus, blob, file.name.replace(/\.pdf$/i, '.txt'));
-                } catch(error) {
-                    console.error("PDF Text Extract Error:", error);
-                    createStatusElement(pdfToWordStatus, 'Could not extract text from PDF.', 'error');
-                }
-            });
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="rename-files-panel">
+        <div class="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
+          <i data-feather="edit-2" class="w-5 h-5 text-amber-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">File Rename</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Batch rename files with prefix, suffix, and find-replace.</p>
+      </div>
 
-            // --- Media Converter Logic ---
-            const mediaInput = document.getElementById('media-input');
-            const mediaStatus = document.getElementById('media-status');
-            const mediaOptions = document.getElementById('media-options');
-            setupDragAndDrop(document.getElementById('media-dropzone'), mediaInput);
-            const { createFFmpeg, fetchFile } = FFmpeg;
-            const ffmpeg = createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
-            mediaInput.addEventListener('change', (e) => {
-                 const file = e.target.files[0]; if (!file) return;
-                mediaStatus.innerHTML = ''; mediaOptions.innerHTML = '';
-                const isVideo = file.type.startsWith('video/'), isAudio = file.type.startsWith('audio/');
-                if (!isVideo && !isAudio) { createStatusElement(mediaStatus, 'Unsupported file type.', 'error'); return; }
-                mediaOptions.classList.remove('hidden');
-                mediaOptions.innerHTML = `<p class="font-medium dark:text-slate-300">Convert "${file.name}" to:</p><div class="flex flex-wrap gap-2">${ isVideo ? `<button data-format="mp4">MP4</button><button data-format="mp3">MP3 (Audio)</button><button data-format="gif">GIF</button>` : `<button data-format="mp3">MP3</button><button data-format="wav">WAV</button>`}</div>`;
-                document.querySelectorAll('#media-converter button').forEach(button => {
-                    button.classList.add('flex-1', 'bg-blue-100', 'hover:bg-blue-200', 'text-blue-800', 'font-medium', 'py-2', 'px-4', 'rounded-md', 'dark:bg-blue-900/50', 'dark:hover:bg-blue-900', 'dark:text-blue-300');
-                    button.onclick = () => handleMediaConversion(file, button.dataset.format);
-                });
-            });
-            const handleMediaConversion = async (file, format) => {
-                const outName = `${file.name.split('.').slice(0, -1).join('.')}.${format}`;
-                try {
-                    if (!ffmpeg.isLoaded()) { 
-                        createStatusElement(mediaStatus, 'Loading FFmpeg core...', 'progress');
-                        await ffmpeg.load(); 
-                    }
-                    ffmpeg.setProgress(({ ratio }) => { if (ratio < 1) createStatusElement(mediaStatus, `Converting... ${Math.round(ratio * 100)}%`, 'progress'); });
-                    createStatusElement(mediaStatus, 'Preparing file...', 'progress');
-                    ffmpeg.FS('writeFile', file.name, await fetchFile(file));
-                    const command = format === 'gif' ? ['-i', file.name, '-vf', 'fps=10,scale=320:-1:flags=lanczos', outName] : ['-i', file.name, outName];
-                    await ffmpeg.run(...command);
-                    const data = ffmpeg.FS('readFile', outName);
-                    const blob = new Blob([data.buffer], { type: file.type });
-                    mediaStatus.dataset.originalSize = file.size;
-                    createDownloadButton(mediaStatus, blob, outName);
-                } catch (error) { console.error(error); createStatusElement(mediaStatus, 'An error occurred during conversion.', 'error'); }
-            };
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="file-size-analyzer-panel">
+        <div class="w-10 h-10 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center mb-3">
+          <i data-feather="bar-chart-2" class="w-5 h-5 text-cyan-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">File Size Analyzer</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">View file type, size, and modification date.</p>
+      </div>
 
-            // --- QR Code Generator Logic ---
-            const qrCodeInput = document.getElementById('qrcode-input');
-            const qrCodeOutput = document.getElementById('qrcode-output');
-            const qrCodeActions = document.getElementById('qrcode-actions');
-            let qrCodeInstance = null;
-            qrCodeInput.addEventListener('input', () => {
-                const text = qrCodeInput.value.trim();
-                qrCodeOutput.innerHTML = '';
-                if (text) {
-                    qrCodeOutput.classList.remove('hidden');
-                    qrCodeActions.classList.remove('hidden');
-                    if(qrCodeInstance) {
-                        qrCodeInstance.makeCode(text);
-                    } else {
-                        qrCodeInstance = new QRCode(qrCodeOutput, { text: text, width: 200, height: 200 });
-                    }
-                } else {
-                    qrCodeOutput.classList.add('hidden');
-                    qrCodeActions.classList.add('hidden');
-                    qrCodeInstance = null;
-                }
-            });
-            document.getElementById('qrcode-download').addEventListener('click', () => {
-                const canvas = qrCodeOutput.querySelector('canvas');
-                if (canvas) {
-                    const link = document.createElement('a');
-                    link.download = 'qrcode.png';
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                }
-            });
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="text-cleaner-panel">
+        <div class="w-10 h-10 rounded-lg bg-lime-100 dark:bg-lime-900/30 flex items-center justify-center mb-3">
+          <i data-feather="align-left" class="w-5 h-5 text-lime-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">Text File Cleaner</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Remove extra whitespace, blank lines, and special characters.</p>
+      </div>
 
-            // --- File Hash Generator Logic ---
-            const hashInput = document.getElementById('hash-input');
-            const hashStatus = document.getElementById('hash-status');
-            setupDragAndDrop(document.getElementById('hash-dropzone'), hashInput);
-            hashInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                createStatusElement(hashStatus, `Calculating SHA-256 for ${file.name}...`, 'progress');
-                try {
-                    const buffer = await file.arrayBuffer();
-                    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-                    const hashArray = Array.from(new Uint8Array(hashBuffer));
-                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                    hashStatus.innerHTML = `
-                        <div class="p-3 rounded-md bg-slate-100 dark:bg-slate-700">
-                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">SHA-256 Hash:</p>
-                            <div class="flex items-center mt-2">
-                                <input type="text" readonly value="${hashHex}" class="w-full text-xs bg-white dark:bg-slate-800 rounded-l-md border-slate-300 dark:border-slate-600">
-                                <button onclick="copyToClipboard('${hashHex}')" class="bg-blue-600 text-white p-2 rounded-r-md hover:bg-blue-700">
-                                    <i data-feather="copy" class="h-4 w-4"></i>
-                                </button>
-                            </div>
-                        </div>`;
-                    feather.replace();
-                } catch (error) { createStatusElement(hashStatus, 'Error calculating file hash.', 'error'); }
-            });
-        });
-    </script>
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="qr-code-panel">
+        <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3">
+          <i data-feather="grid" class="w-5 h-5 text-slate-600 dark:text-slate-300"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">QR Code Generator</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Generate QR codes from any text or URL.</p>
+      </div>
+
+      <div class="tool-card bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700" data-panel="hash-generator-panel">
+        <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
+          <i data-feather="hash" class="w-5 h-5 text-blue-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-1">File Hash Generator</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Compute SHA-256, SHA-1, or SHA-384 hash of any file.</p>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOOL PANELS (hidden by default, shown via showPanel())
+══════════════════════════════════════════════════════════ -->
+<div class="container mx-auto px-4 md:px-6 pb-16">
+
+  <!-- Back button helper (reused in panels) -->
+  <!-- Each panel starts with a back button -->
+
+  <!-- ╔═══════════════════════════════╗
+       ║  MERGE PDF PANEL             ║
+       ╚═══════════════════════════════╝ -->
+  <div id="merge-pdf-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Merge PDFs</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Combine multiple PDFs into one. Processed locally.</p>
+      <div id="pdf-merge-dropzone" class="drop-zone mb-4">
+        <input type="file" id="pdf-merge-input" class="hidden-input" multiple accept=".pdf">
+        <label for="pdf-merge-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop PDFs here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div id="merge-file-list" class="mb-4"><p class="text-slate-400 text-sm">No files added.</p></div>
+      <div class="flex gap-3">
+        <button id="merge-btn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Merge PDFs</button>
+        <button id="merge-clear-btn" class="px-5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">Clear</button>
+      </div>
+      <p id="merge-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="merge-download-area"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  SPLIT PDF PANEL             ║
+       ╚═══════════════════════════════╝ -->
+  <div id="split-pdf-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Split PDF</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Split by all pages or a custom range.</p>
+      <div id="split-pdf-dropzone" class="drop-zone mb-4">
+        <input type="file" id="split-pdf-input" class="hidden-input" accept=".pdf">
+        <label for="split-pdf-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop PDF here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Split mode</label>
+        <select id="split-mode" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="all">Each page as separate PDF</option>
+          <option value="range">By page range</option>
+        </select>
+      </div>
+      <div id="split-range-group" class="hidden mb-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Page ranges (e.g. 1-3, 5, 7-9)</label>
+        <input type="text" id="split-range" placeholder="1-3, 5, 7-9"
+          class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <button id="split-btn" class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors">Split PDF</button>
+      <p id="split-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="split-download-area" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  COMPRESS PDF PANEL          ║
+       ╚═══════════════════════════════╝ -->
+  <div id="compress-pdf-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Compress PDF</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Reduce PDF size using object stream compression.</p>
+      <div id="compress-pdf-dropzone" class="drop-zone mb-4">
+        <input type="file" id="compress-pdf-input" class="hidden-input" accept=".pdf">
+        <label for="compress-pdf-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop PDF here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <button id="compress-pdf-btn" class="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors">Compress PDF</button>
+      <p id="compress-pdf-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="compress-pdf-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  PDF TO IMAGE PANEL          ║
+       ╚═══════════════════════════════╝ -->
+  <div id="pdf-to-image-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">PDF to Image</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Render each PDF page as a PNG image.</p>
+      <div id="pdf-to-image-dropzone" class="drop-zone mb-4">
+        <input type="file" id="pdf-to-image-input" class="hidden-input" accept=".pdf">
+        <label for="pdf-to-image-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop PDF here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <button id="pdf-to-image-btn" class="px-5 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg text-sm font-medium transition-colors">Convert to Images</button>
+      <p id="pdf-to-image-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="pdf-to-image-download" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  IMAGE TO PDF PANEL          ║
+       ╚═══════════════════════════════╝ -->
+  <div id="image-to-pdf-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Image to PDF</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Select one or more images to combine into a PDF.</p>
+      <div id="image-to-pdf-dropzone" class="drop-zone mb-4">
+        <input type="file" id="image-to-pdf-input" class="hidden-input" multiple accept="image/*">
+        <label for="image-to-pdf-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop images here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <button id="image-to-pdf-btn" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium transition-colors">Create PDF</button>
+      <p id="image-to-pdf-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="image-to-pdf-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  PDF TO TEXT PANEL           ║
+       ╚═══════════════════════════════╝ -->
+  <div id="pdf-to-text-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">PDF to Text</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Extract all text content from a PDF document.</p>
+      <div id="pdf-to-text-dropzone" class="drop-zone mb-4">
+        <input type="file" id="pdf-to-text-input" class="hidden-input" accept=".pdf">
+        <label for="pdf-to-text-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop PDF here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <button id="pdf-to-text-btn" class="px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition-colors mb-4">Extract Text</button>
+      <p id="pdf-to-text-status" class="text-sm mb-2 text-slate-500 dark:text-slate-400"></p>
+      <textarea id="pdf-text-output" rows="10" placeholder="Extracted text will appear here…"
+        class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"></textarea>
+      <div class="flex gap-3 mt-3">
+        <button id="pdf-text-copy-btn" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">Copy</button>
+        <button id="pdf-text-download-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Download .txt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  COMPRESS IMAGE PANEL        ║
+       ╚═══════════════════════════════╝ -->
+  <div id="compress-image-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Compress Image</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Reduce image file size with adjustable quality.</p>
+      <div id="compress-img-dropzone" class="drop-zone mb-4">
+        <input type="file" id="compress-img-input" class="hidden-input" accept="image/*">
+        <label for="compress-img-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop image here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <img id="compress-img-preview" class="hidden max-h-40 mx-auto rounded-lg mb-4 shadow" alt="Preview">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          Quality: <span id="compress-quality-label" class="text-blue-600">85%</span>
+        </label>
+        <input type="range" id="compress-quality" min="1" max="100" value="85"
+          class="w-full h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-blue-600">
+      </div>
+      <p id="compress-img-original-size" class="text-xs text-slate-400 mb-3"></p>
+      <button id="compress-img-btn" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">Compress Image</button>
+      <p id="compress-img-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="compress-img-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  RESIZE IMAGE PANEL          ║
+       ╚═══════════════════════════════╝ -->
+  <div id="resize-image-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Resize Image</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Set custom dimensions with optional aspect ratio lock.</p>
+      <div id="resize-img-dropzone" class="drop-zone mb-4">
+        <input type="file" id="resize-img-input" class="hidden-input" accept="image/*">
+        <label for="resize-img-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop image here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Width (px)</label>
+          <input type="number" id="resize-width" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Height (px)</label>
+          <input type="number" id="resize-height" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+      <label class="flex items-center gap-2 mb-4 cursor-pointer">
+        <input type="checkbox" id="resize-aspect-lock" checked class="w-4 h-4 accent-blue-600">
+        <span class="text-sm text-slate-600 dark:text-slate-400">Lock aspect ratio</span>
+      </label>
+      <button id="resize-img-btn" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors">Resize Image</button>
+      <p id="resize-img-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="resize-img-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  PNG TO JPG PANEL            ║
+       ╚═══════════════════════════════╝ -->
+  <div id="png-to-jpg-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">PNG to JPG</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Convert PNG files to JPG with background color and quality options.</p>
+      <div id="png-to-jpg-dropzone" class="drop-zone mb-4">
+        <input type="file" id="png-to-jpg-input" class="hidden-input" multiple accept=".png,image/png">
+        <label for="png-to-jpg-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop PNG(s) here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Background color</label>
+          <input type="color" id="png-jpg-bg" value="#ffffff"
+            class="w-full h-9 border border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Quality: <span id="png-jpg-quality-label" class="text-blue-600">92%</span>
+          </label>
+          <input type="range" id="png-jpg-quality" min="1" max="100" value="92"
+            class="w-full h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-blue-600">
+        </div>
+      </div>
+      <button id="png-to-jpg-btn" class="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors">Convert to JPG</button>
+      <p id="png-to-jpg-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="png-to-jpg-download" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  JPG TO PNG PANEL            ║
+       ╚═══════════════════════════════╝ -->
+  <div id="jpg-to-png-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">JPG to PNG</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Convert JPG images to lossless PNG format.</p>
+      <div id="jpg-to-png-dropzone" class="drop-zone mb-4">
+        <input type="file" id="jpg-to-png-input" class="hidden-input" multiple accept=".jpg,.jpeg,image/jpeg">
+        <label for="jpg-to-png-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop JPG(s) here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <button id="jpg-to-png-btn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">Convert to PNG</button>
+      <p id="jpg-to-png-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="jpg-to-png-download" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  IMAGE CONVERTER PANEL       ║
+       ╚═══════════════════════════════╝ -->
+  <div id="image-converter-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Image Converter</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Convert between PNG, JPG, and PDF formats.</p>
+      <div id="img-converter-dropzone" class="drop-zone mb-4">
+        <input type="file" id="img-converter-input" class="hidden-input" accept="image/*">
+        <label for="img-converter-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop image here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div class="mb-4">
+        <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Convert to:</p>
+        <div class="flex gap-2 flex-wrap">
+          <button class="img-converter-btn px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white transition-colors" data-fmt="png">PNG</button>
+          <button class="img-converter-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors" data-fmt="jpg">JPG</button>
+          <button class="img-converter-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors" data-fmt="pdf">PDF</button>
+        </div>
+      </div>
+      <button id="img-converter-btn" class="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors">Convert</button>
+      <p id="img-converter-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="img-converter-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  MEDIA CONVERTER PANEL       ║
+       ╚═══════════════════════════════╝ -->
+  <div id="media-converter-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Media Converter</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Convert audio/video files using FFmpeg.wasm (no upload).</p>
+      <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 mb-4 text-xs text-amber-700 dark:text-amber-300">
+        ⚠ FFmpeg.wasm may take a moment to load on first use. Large files may take time.
+      </div>
+      <div id="media-dropzone" class="drop-zone mb-4">
+        <input type="file" id="media-input" class="hidden-input" accept="video/*,audio/*">
+        <label for="media-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop media file here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div class="mb-4">
+        <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Output format:</p>
+        <div class="flex gap-2 flex-wrap">
+          <button class="media-fmt-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600 text-white" data-fmt="mp4">MP4</button>
+          <button class="media-fmt-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" data-fmt="webm">WebM</button>
+          <button class="media-fmt-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" data-fmt="mp3">MP3</button>
+          <button class="media-fmt-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" data-fmt="wav">WAV</button>
+          <button class="media-fmt-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" data-fmt="gif">GIF</button>
+        </div>
+      </div>
+      <div class="progress-bar mb-3"><div id="media-progress-fill" class="progress-fill"></div></div>
+      <button id="media-convert-btn" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">Convert</button>
+      <p id="media-status" class="text-sm mt-3 text-slate-500 dark:text-slate-400"></p>
+      <div id="media-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  FILE RENAME PANEL           ║
+       ╚═══════════════════════════════╝ -->
+  <div id="rename-files-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">File Rename</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Batch rename files then download them with new names.</p>
+      <input type="file" id="rename-files-input" multiple
+        class="block w-full text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700">
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Prefix</label>
+          <input type="text" id="rename-prefix" placeholder="e.g. 2024-" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Suffix (before ext)</label>
+          <input type="text" id="rename-suffix" placeholder="e.g. _final" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Find</label>
+          <input type="text" id="rename-find" placeholder="text to find" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Replace</label>
+          <input type="text" id="rename-replace" placeholder="replacement" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+      <div class="flex gap-3 mb-4">
+        <button id="rename-apply-btn" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors">Apply Pattern</button>
+        <button id="rename-download-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">Download All</button>
+      </div>
+      <div id="rename-file-list"><p class="text-slate-400 text-sm">No files selected.</p></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  FILE SIZE ANALYZER PANEL    ║
+       ╚═══════════════════════════════╝ -->
+  <div id="file-size-analyzer-panel" class="tool-panel max-w-3xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">File Size Analyzer</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">View file metadata: name, type, size, and last modified.</p>
+      <input type="file" id="file-size-input" multiple
+        class="block w-full text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 mb-5 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700">
+      <div id="file-size-table" class="overflow-x-auto rounded-lg"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  TEXT CLEANER PANEL          ║
+       ╚═══════════════════════════════╝ -->
+  <div id="text-cleaner-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">Text File Cleaner</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Clean a .txt file by removing unwanted whitespace and characters.</p>
+      <input type="file" id="text-cleaner-input" accept=".txt,text/plain"
+        class="block w-full text-sm text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700">
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="tc-trim" checked class="accent-blue-600"> Trim line whitespace
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="tc-blank" checked class="accent-blue-600"> Remove extra blank lines
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="tc-spaces" checked class="accent-blue-600"> Collapse multiple spaces
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="tc-special" class="accent-blue-600"> Remove non-ASCII chars
+        </label>
+      </div>
+      <button id="text-cleaner-btn" class="px-5 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg text-sm font-medium transition-colors mb-4">Clean Text</button>
+      <p id="text-cleaner-status" class="text-sm mb-2 text-slate-500 dark:text-slate-400"></p>
+      <textarea id="text-cleaner-preview" rows="8" placeholder="Cleaned text preview…"
+        class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"></textarea>
+      <div class="flex gap-3 mt-3">
+        <button id="text-cleaner-copy-btn" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">Copy</button>
+      </div>
+      <div id="text-cleaner-download" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  QR CODE PANEL               ║
+       ╚═══════════════════════════════╝ -->
+  <div id="qr-code-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">QR Code Generator</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Generate a QR code from any text or URL.</p>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Text or URL</label>
+        <textarea id="qr-input" rows="3" placeholder="https://example.com or any text…"
+          class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+      </div>
+      <button id="qr-generate-btn" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-600 dark:hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors mb-5">Generate QR Code</button>
+      <div id="qrcode-output" class="flex justify-center mb-3"></div>
+      <div id="qr-download-area" class="flex justify-center"></div>
+    </div>
+  </div>
+
+  <!-- ╔═══════════════════════════════╗
+       ║  HASH GENERATOR PANEL        ║
+       ╚═══════════════════════════════╝ -->
+  <div id="hash-generator-panel" class="tool-panel max-w-2xl mx-auto">
+    <button data-action="show-dashboard" class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-6">
+      <i data-feather="arrow-left" class="w-4 h-4"></i> Back to Tools
+    </button>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-7">
+      <h2 class="text-xl font-bold dark:text-white mb-1">File Hash Generator</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Compute the cryptographic hash of any file locally.</p>
+      <div id="hash-dropzone" class="drop-zone mb-4">
+        <input type="file" id="hash-file-input" class="hidden-input">
+        <label for="hash-file-input" class="cursor-pointer block">
+          <i data-feather="upload-cloud" class="mx-auto mb-2 text-slate-400" style="width:40px;height:40px"></i>
+          <p class="text-slate-500 dark:text-slate-400 text-sm">Drop any file here or <span class="text-blue-600">browse</span></p>
+        </label>
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Algorithm</label>
+        <select id="hash-algorithm" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="SHA-256">SHA-256</option>
+          <option value="SHA-1">SHA-1</option>
+          <option value="SHA-384">SHA-384</option>
+        </select>
+      </div>
+      <button id="hash-btn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors mb-4">Compute Hash</button>
+      <p id="hash-status" class="text-sm mb-2 text-slate-500 dark:text-slate-400"></p>
+      <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-3">
+        <p id="hash-output" class="font-mono text-xs text-slate-700 dark:text-slate-300 break-all">—</p>
+      </div>
+      <button id="hash-copy-btn" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">Copy Hash</button>
+    </div>
+  </div>
+
+</div><!-- /container panels -->
+
+<!-- ══════════════════════════════════════════
+     ABOUT SECTION
+══════════════════════════════════════════ -->
+<section id="about" class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-16 scroll-mt-16">
+  <div class="container mx-auto px-4 md:px-6 max-w-4xl">
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-8 text-center">Why FileFusion?</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="text-center">
+        <div class="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+          <i data-feather="shield" class="w-7 h-7 text-green-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-2">100% Private</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Your files never leave your device. All processing happens in your browser using JavaScript APIs.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
+          <i data-feather="zap" class="w-7 h-7 text-blue-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-2">Fast & Offline</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Works offline once loaded. No network latency for file operations. Instant results.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mx-auto mb-4">
+          <i data-feather="gift" class="w-7 h-7 text-purple-600"></i>
+        </div>
+        <h3 class="font-semibold text-slate-800 dark:text-white mb-2">Free Forever</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">No sign-up, no subscriptions, no watermarks. All tools are completely free to use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer class="bg-slate-900 text-slate-400 py-10">
+  <div class="container mx-auto px-4 md:px-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-400"><path d="M12 22v-5m0 5H8.5a5.5 5.5 0 0 1-5-5.5V8.5a5.5 5.5 0 0 1 5.5-5h7a5.5 5.5 0 0 1 5.5 5v3.5a5.5 5.5 0 0 1-5 5.5H12Z"/><path d="M12 2v5"/><path d="M22 12h-5"/><path d="M2 12H7"/></svg>
+          <span class="text-white font-bold">FileFusion</span>
+        </div>
+        <p class="text-sm">Privacy-first file tools that run entirely in your browser.</p>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold mb-3">Tools</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><a href="#pdf-tools" class="hover:text-white transition-colors">PDF Tools</a></li>
+          <li><a href="#image-tools" class="hover:text-white transition-colors">Image Tools</a></li>
+          <li><a href="#converter-tools" class="hover:text-white transition-colors">Media Converter</a></li>
+          <li><a href="#utility-tools" class="hover:text-white transition-colors">Utilities</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold mb-3">Project</h4>
+        <ul class="space-y-1.5 text-sm">
+          <li><a href="tools/merge-pdf.html" class="hover:text-white transition-colors">Merge PDFs</a></li>
+          <li><a href="tools/compress-image.html" class="hover:text-white transition-colors">Compress Image</a></li>
+          <li>
+            <a href="https://github.com/amityadav8467/FileFusion-Local-File-Tools" target="_blank" rel="noopener noreferrer"
+              class="hover:text-white transition-colors inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              GitHub Repository
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+      <p class="text-sm">&copy; <span id="copyright-year"></span> FileFusion. All rights reserved.</p>
+      <p class="text-xs text-slate-500">Your files are processed locally. We collect no data.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════
+     LIBRARIES
+════════════════════════════════════════ -->
+<!-- PDF-Lib for PDF manipulation -->
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<!-- PDF.js for rendering PDFs -->
+<script src="https://unpkg.com/pdfjs-dist@2.11.338/build/pdf.min.js"></script>
+<!-- FFmpeg.wasm for media conversion -->
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+
+<!-- App Script -->
+<script src="js/app.js"></script>
+
+<!-- Service Worker Registration -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>
-
-

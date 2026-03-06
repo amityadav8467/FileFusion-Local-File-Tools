@@ -1,0 +1,15 @@
+{
+  "name": "FileFusion – Local File Tools",
+  "short_name": "FileFusion",
+  "description": "Privacy-first file processing tools. All operations run locally in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "categories": ["utilities", "productivity"],
+  "screenshots": []
+}
