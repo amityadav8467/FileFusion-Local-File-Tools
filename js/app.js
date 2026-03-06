@@ -12,13 +12,22 @@ if (typeof pdfjsLib !== 'undefined') {
 //  UTILITY HELPERS
 // ════════════════════════════════════════════════════
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
   const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
-  t.innerHTML = `<span style="font-size:1.1em">${icons[type] || 'ℹ'}</span> <span>${msg}</span>`;
+  t.innerHTML = `<span style="font-size:1.1em">${icons[type] || 'ℹ'}</span> <span>${escapeHtml(msg)}</span>`;
   container.appendChild(t);
   setTimeout(() => {
     t.classList.add('removing');
@@ -59,7 +68,7 @@ function createDownloadButton(parent, blob, filename, label = 'Download') {
   a.download = filename;
   a.className =
     'inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors';
-  a.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${label}`;
+  a.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${escapeHtml(label)}`;
   parent.appendChild(a);
   return a;
 }
@@ -833,10 +842,6 @@ function downloadRenamedFiles() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   showToast(`Downloading ${renameFiles.length} renamed file(s).`, 'success');
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ════════════════════════════════════════════════════
