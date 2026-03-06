@@ -859,7 +859,7 @@ function handleFileSizeAnalyze(e) {
   files.forEach(f => {
     total += f.size;
     html += `<tr class="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-      <td class="px-3 py-2 max-w-xs truncate">${escapeHtml(f.name)}</td>
+      <td class="px-3 py-2" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(f.name)}</td>
       <td class="px-3 py-2 text-slate-500">${f.type || 'unknown'}</td>
       <td class="px-3 py-2 font-mono">${formatBytes(f.size)}</td>
       <td class="px-3 py-2 text-slate-500">${new Date(f.lastModified).toLocaleDateString()}</td>
