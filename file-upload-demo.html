@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Upload System Demo - FileFusion</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Dark Mode Initializer -->
+  <script>
+    (function() {
+      const storedTheme = localStorage.getItem('theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (storedTheme === 'dark' || (!storedTheme && systemPrefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
+    <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2.5">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">
+          <path d="M12 22v-5m0 5H8.5a5.5 5.5 0 0 1-5-5.5V8.5a5.5 5.5 0 0 1 5.5-5h7a5.5 5.5 0 0 1 5.5 5v3.5a5.5 5.5 0 0 1-5 5.5H12Z"/>
+          <path d="M12 2v5"/>
+          <path d="M22 12h-5"/>
+          <path d="M2 12H7"/>
+        </svg>
+        <span class="text-xl font-bold text-slate-800 dark:text-white">FileFusion</span>
+      </a>
+      
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" aria-label="Toggle dark mode"
+          class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+          <span id="theme-icon-light" class="dark:hidden">🌙</span>
+          <span id="theme-icon-dark" class="hidden dark:inline">☀️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 md:px-6 py-8 max-w-6xl">
+    
+    <!-- Page Title -->
+    <div class="text-center mb-10">
+      <h1 class="text-4xl font-bold mb-3 text-slate-800 dark:text-white">
+        File Upload System Demo
+      </h1>
+      <p class="text-slate-600 dark:text-slate-400 text-lg">
+        Modern, accessible file upload with drag & drop, previews, and validation
+      </p>
+    </div>
+
+    <!-- Demo Grid -->
+    <div class="grid md:grid-cols-2 gap-8">
+      
+      <!-- Image Upload Demo -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">
+          📸 Image Upload
+        </h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          Upload images with instant preview. Supports JPG, PNG, GIF, WebP.
+        </p>
+        
+        <div id="image-dropzone" class="drop-zone">
+          <input type="file" id="image-input" class="hidden-input" accept="image/*">
+          <label for="image-input" class="cursor-pointer block">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="text-slate-500 dark:text-slate-400 text-sm">
+              Drop image here or <span class="text-blue-600 font-medium">browse</span>
+            </p>
+          </label>
+        </div>
+        
+        <div id="image-preview-container"></div>
+      </div>
+
+      <!-- PDF Upload Demo -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">
+          📄 PDF Upload
+        </h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          Upload PDF documents. File info displayed automatically.
+        </p>
+        
+        <div id="pdf-dropzone" class="drop-zone">
+          <input type="file" id="pdf-input" class="hidden-input" accept="application/pdf">
+          <label for="pdf-input" class="cursor-pointer block">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p class="text-slate-500 dark:text-slate-400 text-sm">
+              Drop PDF here or <span class="text-blue-600 font-medium">browse</span>
+            </p>
+          </label>
+        </div>
+        
+        <div id="pdf-preview-container"></div>
+      </div>
+
+      <!-- General File Upload Demo -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">
+          📁 General File Upload
+        </h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          Upload any file type. Demonstrates file size limits (max 10MB).
+        </p>
+        
+        <div id="general-dropzone" class="drop-zone">
+          <input type="file" id="general-input" class="hidden-input">
+          <label for="general-input" class="cursor-pointer block">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="text-slate-500 dark:text-slate-400 text-sm">
+              Drop any file here or <span class="text-blue-600 font-medium">browse</span>
+            </p>
+          </label>
+        </div>
+        
+        <div id="general-preview-container"></div>
+      </div>
+
+      <!-- Multiple Files Upload Demo -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4 text-slate-800 dark:text-white">
+          📚 Multiple Files Upload
+        </h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          Select or drop multiple images at once.
+        </p>
+        
+        <div id="multiple-dropzone" class="drop-zone">
+          <input type="file" id="multiple-input" class="hidden-input" accept="image/*" multiple>
+          <label for="multiple-input" class="cursor-pointer block">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+            <p class="text-slate-500 dark:text-slate-400 text-sm">
+              Drop multiple images or <span class="text-blue-600 font-medium">browse</span>
+            </p>
+          </label>
+        </div>
+        
+        <div id="multiple-preview-container"></div>
+      </div>
+
+    </div>
+
+    <!-- Features Section -->
+    <div class="mt-12 bg-white dark:bg-slate-800 rounded-2xl shadow-md p-8">
+      <h2 class="text-2xl font-bold mb-6 text-slate-800 dark:text-white">
+        ✨ Features & Benefits
+      </h2>
+      
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-xl">🖱️</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1 text-slate-800 dark:text-white">Drag & Drop</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Intuitive drag and drop support with visual feedback</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-xl">👁️</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1 text-slate-800 dark:text-white">Instant Preview</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Image previews using FileReader API</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-xl">ℹ️</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1 text-slate-800 dark:text-white">File Metadata</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Display file name, type, and size</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-xl">🗑️</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1 text-slate-800 dark:text-white">Remove Files</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Easy file removal with reset functionality</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-xl">✅</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1 text-slate-800 dark:text-white">Validation</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">File type and size validation with error messages</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+              <span class="text-xl">🌐</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-1 text-slate-800 dark:text-white">Cross-Browser</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Works on Chrome, Edge, Firefox, and mobile browsers</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technical Details -->
+    <div class="mt-8 bg-slate-100 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+      <h3 class="font-bold mb-3 text-slate-800 dark:text-white">🔧 Technical Implementation</h3>
+      <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+          <span><strong>Modern JavaScript:</strong> ES6+ class-based architecture with clean, modular code</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+          <span><strong>FileReader API:</strong> Native browser API for reading file contents and generating previews</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+          <span><strong>DataTransfer API:</strong> Seamless drag and drop with proper file handling</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+          <span><strong>Event Delegation:</strong> Proper event handling for drag operations with highlight effects</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+          <span><strong>Accessibility:</strong> Keyboard navigation support and ARIA attributes</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+          <span><strong>No Dependencies:</strong> Zero external libraries - pure vanilla JavaScript</span>
+        </li>
+      </ul>
+    </div>
+
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/file-upload.js"></script>
+  <script>
+    // Toast notification function
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container') || createToastContainer();
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      // SECURITY: Use textContent to prevent XSS from user-controlled messages (e.g., file names in error messages)
+      const span = document.createElement('span');
+      span.textContent = message;
+      toast.appendChild(span);
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+    
+    function createToastContainer() {
+      const container = document.createElement('div');
+      container.id = 'toast-container';
+      document.body.appendChild(container);
+      return container;
+    }
+    
+    // Dark mode toggle
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+      const html = document.documentElement;
+      const isDark = html.classList.contains('dark');
+      
+      if (isDark) {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+    
+    // Initialize file upload managers
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // Image Upload
+      const imageUpload = new FileUploadManager({
+        dropzoneId: 'image-dropzone',
+        inputId: 'image-input',
+        previewId: 'image-preview-container',
+        acceptedTypes: ['image/*'],
+        maxSizeBytes: 10 * 1024 * 1024, // 10MB
+        showPreview: true,
+        showMetadata: true,
+        onFileSelect: (files) => {
+          console.log('Image selected:', files);
+          showToast(`Image "${files[0].name}" uploaded successfully!`, 'success');
+        },
+        onFileRemove: () => {
+          showToast('Image removed', 'info');
+        }
+      });
+      
+      // PDF Upload
+      const pdfUpload = new FileUploadManager({
+        dropzoneId: 'pdf-dropzone',
+        inputId: 'pdf-input',
+        previewId: 'pdf-preview-container',
+        acceptedTypes: ['application/pdf'],
+        maxSizeBytes: 50 * 1024 * 1024, // 50MB
+        showPreview: true,
+        showMetadata: true,
+        onFileSelect: (files) => {
+          console.log('PDF selected:', files);
+          showToast(`PDF "${files[0].name}" uploaded successfully!`, 'success');
+        },
+        onFileRemove: () => {
+          showToast('PDF removed', 'info');
+        }
+      });
+      
+      // General File Upload
+      const generalUpload = new FileUploadManager({
+        dropzoneId: 'general-dropzone',
+        inputId: 'general-input',
+        previewId: 'general-preview-container',
+        acceptedTypes: [], // Accept all types
+        maxSizeBytes: 10 * 1024 * 1024, // 10MB limit
+        showPreview: true,
+        showMetadata: true,
+        onFileSelect: (files) => {
+          console.log('File selected:', files);
+          showToast(`File "${files[0].name}" uploaded successfully!`, 'success');
+        },
+        onFileRemove: () => {
+          showToast('File removed', 'info');
+        }
+      });
+      
+      // Multiple Files Upload
+      const multipleUpload = new FileUploadManager({
+        dropzoneId: 'multiple-dropzone',
+        inputId: 'multiple-input',
+        previewId: 'multiple-preview-container',
+        acceptedTypes: ['image/*'],
+        allowMultiple: true,
+        showPreview: true,
+        showMetadata: true,
+        onFileSelect: (files) => {
+          console.log('Files selected:', files);
+          showToast(`${files.length} file(s) uploaded successfully!`, 'success');
+        },
+        onFileRemove: (index, remaining) => {
+          showToast(`File removed. ${remaining.length} file(s) remaining.`, 'info');
+        }
+      });
+      
+    });
+  </script>
+
+</body>
+</html>
