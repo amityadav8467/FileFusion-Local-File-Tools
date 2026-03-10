@@ -276,7 +276,9 @@ class FileUploadManager {
           }
         } else if (acceptedType.includes('*')) {
           // Wildcard match (e.g., "image/*")
-          const pattern = acceptedType.replace(/\*/g, '.*');
+          // Escape all regex special characters except *, then replace * with .*
+          const escapedType = acceptedType.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+          const pattern = escapedType.replace(/\*/g, '.*');
           const regex = new RegExp(`^${pattern}$`);
           if (regex.test(fileType)) {
             typeMatched = true;
@@ -379,6 +381,8 @@ class FileUploadManager {
   createPDFPreview(file) {
     const container = document.createElement('div');
     container.className = 'file-preview-pdf flex items-center justify-center py-8 mb-3';
+    // SECURITY NOTE: Using innerHTML here is safe because the content is static SVG markup
+    // with no user input. The file parameter is only used for function signature consistency.
     container.innerHTML = `
       <div class="text-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -396,6 +400,8 @@ class FileUploadManager {
   createGenericPreview(file) {
     const container = document.createElement('div');
     container.className = 'file-preview-generic flex items-center justify-center py-8 mb-3';
+    // SECURITY NOTE: Using innerHTML here is safe because the content is static SVG markup
+    // with no user input. The file parameter is only used for function signature consistency.
     container.innerHTML = `
       <div class="text-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mx-auto text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -436,6 +442,8 @@ class FileUploadManager {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'file-remove-btn w-full px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2';
+    // SECURITY NOTE: Using innerHTML here is safe because the content is static SVG markup
+    // with no user input. The index parameter is a number, not user-controlled content.
     btn.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

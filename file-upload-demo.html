@@ -294,9 +294,11 @@
       const container = document.getElementById('toast-container') || createToastContainer();
       const toast = document.createElement('div');
       toast.className = `toast toast-${type}`;
-      toast.innerHTML = `
-        <span>${message}</span>
-      `;
+      
+      // SECURITY: Use textContent to prevent XSS from user-controlled messages (e.g., file names in error messages)
+      const span = document.createElement('span');
+      span.textContent = message;
+      toast.appendChild(span);
       
       container.appendChild(toast);
       
