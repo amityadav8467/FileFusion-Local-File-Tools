@@ -276,7 +276,7 @@ class FileUploadManager {
           }
         } else if (acceptedType.includes('*')) {
           // Wildcard match (e.g., "image/*")
-          const pattern = acceptedType.replace('*', '.*');
+          const pattern = acceptedType.replace(/\*/g, '.*');
           const regex = new RegExp(`^${pattern}$`);
           if (regex.test(fileType)) {
             typeMatched = true;
@@ -494,7 +494,7 @@ class FileUploadManager {
    * Format bytes to human-readable string
    */
   formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Byte';
+    if (bytes === 0) return '0 Bytes';
     
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
