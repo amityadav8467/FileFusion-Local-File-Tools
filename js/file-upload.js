@@ -276,8 +276,8 @@ class FileUploadManager {
           }
         } else if (acceptedType.includes('*')) {
           // Wildcard match (e.g., "image/*")
-          // Escape all regex special characters except *, then replace * with .*
-          const escapedType = acceptedType.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+          // Escape all regex special characters (including hyphen) except *, then replace * with .*
+          const escapedType = acceptedType.replace(/[.+?^${}()|[\]\\\-]/g, '\\$&');
           const pattern = escapedType.replace(/\*/g, '.*');
           const regex = new RegExp(`^${pattern}$`);
           if (regex.test(fileType)) {
