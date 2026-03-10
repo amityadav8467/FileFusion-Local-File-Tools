@@ -50,6 +50,14 @@ class FileUploadManager {
     this.previewContainer = null;
     this.currentFiles = [];
     
+    // Store bound function references for proper event listener cleanup
+    this.boundPreventDefaults = this.preventDefaults.bind(this);
+    this.boundHighlight = this.highlight.bind(this);
+    this.boundUnhighlight = this.unhighlight.bind(this);
+    this.boundHandleDrop = this.handleDrop.bind(this);
+    this.boundHandleFileInputChange = this.handleFileInputChange.bind(this);
+    this.boundHandleClick = this.handleClick.bind(this);
+    
     this.init();
   }
   
@@ -93,32 +101,37 @@ class FileUploadManager {
   setupEventListeners() {
     // Prevent default drag behaviors on window
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      this.dropzone.addEventListener(eventName, this.preventDefaults.bind(this), false);
+      this.dropzone.addEventListener(eventName, this.boundPreventDefaults, false);
     });
     
     // Highlight dropzone when dragging files over it
     ['dragenter', 'dragover'].forEach(eventName => {
-      this.dropzone.addEventListener(eventName, this.highlight.bind(this), false);
+      this.dropzone.addEventListener(eventName, this.boundHighlight, false);
     });
     
     // Remove highlight when dragging leaves or dropping
     ['dragleave', 'drop'].forEach(eventName => {
-      this.dropzone.addEventListener(eventName, this.unhighlight.bind(this), false);
+      this.dropzone.addEventListener(eventName, this.boundUnhighlight, false);
     });
     
     // Handle dropped files
-    this.dropzone.addEventListener('drop', this.handleDrop.bind(this), false);
+    this.dropzone.addEventListener('drop', this.boundHandleDrop, false);
     
     // Handle file input change (for browse button)
-    this.input.addEventListener('change', this.handleFileInputChange.bind(this), false);
+    this.input.addEventListener('change', this.boundHandleFileInputChange, false);
     
     // Handle click on dropzone (trigger file input)
-    this.dropzone.addEventListener('click', (e) => {
-      // Only trigger if not clicking on a label (which already triggers input)
-      if (!e.target.closest('label')) {
-        this.input.click();
-      }
-    });
+    this.dropzone.addEventListener('click', this.boundHandleClick);
+  }
+  
+  /**
+   * Handle click on dropzone
+   */
+  handleClick(e) {
+    // Only trigger if not clicking on a label (which already triggers input)
+    if (!e.target.closest('label')) {
+      this.input.click();
+    }
   }
   
   /**
@@ -481,7 +494,7 @@ class FileUploadManager {
    * Format bytes to human-readable string
    */
   formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 Byte';
     
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
@@ -515,17 +528,26 @@ class FileUploadManager {
    * Destroy the manager and clean up event listeners
    */
   destroy() {
-    // Remove event listeners
+    // Remove event listeners using bound function references
     if (this.dropzone) {
-      this.dropzone.removeEventListener('drop', this.handleDrop);
-      this.dropzone.removeEventListener('dragenter', this.highlight);
-      this.dropzone.removeEventListener('dragover', this.highlight);
-      this.dropzone.removeEventListener('dragleave', this.unhighlight);
-      this.dropzone.removeEventListener('drop', this.unhighlight);
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        this.dropzone.removeEventListener(eventName, this.boundPreventDefaults, false);
+      });
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        this.dropzone.removeEventListener(eventName, this.boundHighlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        this.dropzone.removeEventListener(eventName, this.boundUnhighlight, false);
+      });
+      
+      this.dropzone.removeEventListener('drop', this.boundHandleDrop, false);
+      this.dropzone.removeEventListener('click', this.boundHandleClick);
     }
     
     if (this.input) {
-      this.input.removeEventListener('change', this.handleFileInputChange);
+      this.input.removeEventListener('change', this.boundHandleFileInputChange, false);
     }
     
     this.clearFiles();
