@@ -309,26 +309,96 @@ function parsePageRanges(input, total) {
 async function handlePdfCompress() {
   const input = document.getElementById('compress-pdf-input');
   const statusEl = document.getElementById('compress-pdf-status');
+  const progressBar = document.getElementById('compress-pdf-progress');
+  const progressContainer = document.getElementById('compress-pdf-progress-container');
   const area = document.getElementById('compress-pdf-download');
+  const qualityInput = document.getElementById('compress-pdf-quality');
+
   if (!input.files.length) { showToast('Select a PDF file.', 'warning'); return; }
-  area.innerHTML = '';
+  if (typeof pdfjsLib === 'undefined') { showToast('PDF rendering library not loaded.', 'error'); return; }
+  if (typeof PDFLib === 'undefined') { showToast('PDF library not loaded.', 'error'); return; }
+
+  const files = Array.from(input.files);
+  const quality = qualityInput ? parseInt(qualityInput.value) / 100 : 0.75;
   const { PDFDocument } = PDFLib;
-  try {
-    statusEl.textContent = 'Compressing…';
-    const buf = await input.files[0].arrayBuffer();
-    const origSize = buf.byteLength;
-    const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-    const bytes = await doc.save({ useObjectStreams: true });
-    const newSize = bytes.byteLength;
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    const ratio = (((origSize - newSize) / origSize) * 100).toFixed(1);
-    statusEl.textContent = `Before: ${formatBytes(origSize)} → After: ${formatBytes(newSize)} (${ratio >= 0 ? '-' : '+'}${Math.abs(ratio)}%)`;
-    createDownloadButton(area, blob, 'compressed.pdf', 'Download Compressed PDF');
-    showToast('PDF compressed!', 'success');
-  } catch (err) {
-    statusEl.textContent = 'Error: ' + err.message;
-    showToast('Compression failed.', 'error');
+
+  area.innerHTML = '';
+  if (progressContainer) progressContainer.classList.remove('hidden');
+
+  for (const file of files) {
+    try {
+      const origSize = file.size;
+      if (progressBar) progressBar.style.width = '0%';
+      statusEl.textContent = `Loading ${escapeHtml(file.name)}…`;
+
+      const buf = await file.arrayBuffer();
+      const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+      const totalPages = pdfDoc.numPages;
+      const newPdf = await PDFDocument.create();
+
+      for (let i = 1; i <= totalPages; i++) {
+        statusEl.textContent = `Processing ${escapeHtml(file.name)}: page ${i} of ${totalPages}…`;
+        if (progressBar) {
+          progressBar.style.width = `${((i - 1) / totalPages) * 100}%`;
+        }
+
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const jpegDataUrl = canvas.toDataURL('image/jpeg', quality);
+        const jpegBase64 = jpegDataUrl.split(',')[1];
+        const jpegBytes = Uint8Array.from(atob(jpegBase64), c => c.charCodeAt(0));
+
+        const jpegImage = await newPdf.embedJpg(jpegBytes);
+        const pdfPage = newPdf.addPage([viewport.width, viewport.height]);
+        pdfPage.drawImage(jpegImage, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+      }
+
+      // Strip metadata
+      newPdf.setTitle('');
+      newPdf.setAuthor('');
+      newPdf.setSubject('');
+      newPdf.setKeywords([]);
+      newPdf.setProducer('FileFusion');
+      newPdf.setCreator('FileFusion');
+
+      statusEl.textContent = `Saving ${escapeHtml(file.name)}…`;
+      const bytes = await newPdf.save({ useObjectStreams: true });
+      const newSize = bytes.byteLength;
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const ratio = (((origSize - newSize) / origSize) * 100).toFixed(1);
+      const outputName = file.name.replace(/\.pdf$/i, '') + '_compressed.pdf';
+
+      if (progressBar) progressBar.style.width = '100%';
+
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800';
+      resultDiv.innerHTML = `
+        <p class="text-sm font-medium text-green-700 dark:text-green-300">${escapeHtml(file.name)}</p>
+        <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+          ${formatBytes(origSize)} → ${formatBytes(newSize)}
+          <span class="font-semibold">(${ratio >= 0 ? '-' : '+'}${Math.abs(ratio)}% ${ratio >= 0 ? 'reduced' : 'increased'})</span>
+        </p>`;
+      area.appendChild(resultDiv);
+      createDownloadButton(area, blob, outputName, `Download ${escapeHtml(outputName)}`);
+
+      showToast(`${file.name}: ${ratio >= 0 ? `compressed by ${ratio}%` : `size increased by ${Math.abs(ratio)}%`}!`, ratio >= 0 ? 'success' : 'warning');
+    } catch (err) {
+      const errDiv = document.createElement('div');
+      errDiv.className = 'mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800';
+      errDiv.innerHTML = `<p class="text-sm text-red-700 dark:text-red-300">${escapeHtml(file.name)}: ${escapeHtml(err.message)}</p>`;
+      area.appendChild(errDiv);
+      showToast(`Failed to compress ${file.name}.`, 'error');
+    }
   }
+
+  statusEl.textContent = files.length > 1 ? `✓ Processed ${files.length} file(s).` : '✓ Compression complete.';
+  if (progressContainer) progressContainer.classList.add('hidden');
 }
 
 // ════════════════════════════════════════════════════
@@ -1058,6 +1128,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('compress-pdf-dropzone'),
     document.getElementById('compress-pdf-input')
   );
+  document.getElementById('compress-pdf-quality')?.addEventListener('input', e => {
+    const label = document.getElementById('compress-pdf-quality-label');
+    if (label) label.textContent = e.target.value + '%';
+  });
   document.getElementById('compress-pdf-btn')?.addEventListener('click', handlePdfCompress);
 
   // ── PDF to Image ──────────────────────────────────
