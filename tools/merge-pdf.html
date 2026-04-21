@@ -112,8 +112,7 @@
 
       let files = [];
 
-      let uploadManager;
-      uploadManager = new FileUploadManager({
+      const uploadManager = new FileUploadManager({
         dropzoneId: 'merge-dropzone',
         inputId: 'merge-input',
         previewId: 'merge-preview-container',
