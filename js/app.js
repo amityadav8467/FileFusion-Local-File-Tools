@@ -507,11 +507,6 @@ function handleCompressImageChange(e) {
   if (!file) return;
   compressImageFile = file;
   document.getElementById('compress-img-original-size').textContent = 'Original: ' + formatBytes(file.size);
-  const preview = document.getElementById('compress-img-preview');
-  if (preview) {
-    preview.src = URL.createObjectURL(file);
-    preview.classList.remove('hidden');
-  }
 }
 
 async function handleCompressImage() {
@@ -1087,22 +1082,57 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Feather icons ────────────────────────────────
   if (typeof feather !== 'undefined') feather.replace();
 
-  // ── PDF Merge ────────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('pdf-merge-dropzone'),
-    document.getElementById('pdf-merge-input')
-  );
-  const pdfMergeInput = document.getElementById('pdf-merge-input');
-  if (pdfMergeInput) {
-    pdfMergeInput.addEventListener('change', e => {
-      Array.from(e.target.files).forEach(f => filesToMerge.push(f));
-      renderMergeList();
-    });
+  const fileUploadManagers = {};
+  function initFileUploadManager(config) {
+    if (typeof FileUploadManager !== 'undefined') {
+      return new FileUploadManager(config);
+    }
+    const dropzone = document.getElementById(config.dropzoneId);
+    const input = document.getElementById(config.inputId);
+    if (!dropzone || !input) return null;
+    setupDragAndDrop(
+      dropzone,
+      input
+    );
+    return null;
   }
+
+  // ── PDF Merge ────────────────────────────────────
+  fileUploadManagers.pdfMerge = initFileUploadManager({
+    dropzoneId: 'pdf-merge-dropzone',
+    inputId: 'pdf-merge-input',
+    previewId: 'pdf-merge-preview',
+    acceptedTypes: ['application/pdf', '.pdf'],
+    allowMultiple: true,
+    onFileSelect: files => {
+      const selected = Array.from(files);
+      if (filesToMerge.length > 0) {
+        filesToMerge = [...filesToMerge, ...selected];
+        const manager = fileUploadManagers.pdfMerge;
+        if (manager) {
+          manager.currentFiles = filesToMerge;
+          manager.displayFiles(filesToMerge);
+          try {
+            const dt = new DataTransfer();
+            filesToMerge.forEach(file => dt.items.add(file));
+            const input = document.getElementById('pdf-merge-input');
+            if (input) input.files = dt.files;
+          } catch (error) {
+            console.warn('Unable to sync merged PDF files to input element', error);
+          }
+        }
+      } else {
+        filesToMerge = selected;
+      }
+    },
+    onFileRemove: (_, files) => {
+      filesToMerge = Array.from(files);
+    }
+  });
   document.getElementById('merge-btn')?.addEventListener('click', handlePdfMerge);
   document.getElementById('merge-clear-btn')?.addEventListener('click', () => {
     filesToMerge = [];
-    renderMergeList();
+    fileUploadManagers.pdfMerge?.clearFiles();
     const area = document.getElementById('merge-download-area');
     if (area) area.innerHTML = '';
     const status = document.getElementById('merge-status');
@@ -1110,10 +1140,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── PDF Split ─────────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('split-pdf-dropzone'),
-    document.getElementById('split-pdf-input')
-  );
+  fileUploadManagers.pdfSplit = initFileUploadManager({
+    dropzoneId: 'split-pdf-dropzone',
+    inputId: 'split-pdf-input',
+    previewId: 'split-pdf-preview',
+    acceptedTypes: ['application/pdf', '.pdf']
+  });
   const splitMode = document.getElementById('split-mode');
   if (splitMode) {
     splitMode.addEventListener('change', () => {
@@ -1124,10 +1156,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('split-btn')?.addEventListener('click', handlePdfSplit);
 
   // ── PDF Compress ──────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('compress-pdf-dropzone'),
-    document.getElementById('compress-pdf-input')
-  );
+  fileUploadManagers.pdfCompress = initFileUploadManager({
+    dropzoneId: 'compress-pdf-dropzone',
+    inputId: 'compress-pdf-input',
+    previewId: 'compress-pdf-preview',
+    acceptedTypes: ['application/pdf', '.pdf'],
+    allowMultiple: true
+  });
   document.getElementById('compress-pdf-quality')?.addEventListener('input', e => {
     const label = document.getElementById('compress-pdf-quality-label');
     if (label) label.textContent = e.target.value + '%';
@@ -1135,24 +1170,36 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('compress-pdf-btn')?.addEventListener('click', handlePdfCompress);
 
   // ── PDF to Image ──────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('pdf-to-image-dropzone'),
-    document.getElementById('pdf-to-image-input')
-  );
+  fileUploadManagers.pdfToImage = initFileUploadManager({
+    dropzoneId: 'pdf-to-image-dropzone',
+    inputId: 'pdf-to-image-input',
+    previewId: 'pdf-to-image-preview',
+    acceptedTypes: ['application/pdf', '.pdf']
+  });
   document.getElementById('pdf-to-image-btn')?.addEventListener('click', handlePdfToImage);
 
   // ── Image to PDF ──────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('image-to-pdf-dropzone'),
-    document.getElementById('image-to-pdf-input')
-  );
+  fileUploadManagers.imageToPdf = initFileUploadManager({
+    dropzoneId: 'image-to-pdf-dropzone',
+    inputId: 'image-to-pdf-input',
+    previewId: 'image-to-pdf-preview',
+    acceptedTypes: ['image/*'],
+    allowMultiple: true
+  });
   document.getElementById('image-to-pdf-btn')?.addEventListener('click', handleImageToPdf);
 
   // ── Compress Image ────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('compress-img-dropzone'),
-    document.getElementById('compress-img-input')
-  );
+  fileUploadManagers.compressImage = initFileUploadManager({
+    dropzoneId: 'compress-img-dropzone',
+    inputId: 'compress-img-input',
+    previewId: 'compress-img-preview',
+    acceptedTypes: ['image/*'],
+    onFileRemove: () => {
+      compressImageFile = null;
+      const originalSize = document.getElementById('compress-img-original-size');
+      if (originalSize) originalSize.textContent = '';
+    }
+  });
   document.getElementById('compress-img-input')?.addEventListener('change', handleCompressImageChange);
   document.getElementById('compress-quality')?.addEventListener('input', e => {
     const label = document.getElementById('compress-quality-label');
@@ -1161,20 +1208,30 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('compress-img-btn')?.addEventListener('click', handleCompressImage);
 
   // ── Resize Image ───────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('resize-img-dropzone'),
-    document.getElementById('resize-img-input')
-  );
+  fileUploadManagers.resizeImage = initFileUploadManager({
+    dropzoneId: 'resize-img-dropzone',
+    inputId: 'resize-img-input',
+    previewId: 'resize-img-preview',
+    acceptedTypes: ['image/*'],
+    onFileRemove: () => {
+      resizeImageFile = null;
+      resizeOriginalW = 0;
+      resizeOriginalH = 0;
+    }
+  });
   document.getElementById('resize-img-input')?.addEventListener('change', handleResizeFileChange);
   document.getElementById('resize-width')?.addEventListener('change', handleResizeWidthChange);
   document.getElementById('resize-height')?.addEventListener('change', handleResizeHeightChange);
   document.getElementById('resize-img-btn')?.addEventListener('click', handleResizeImage);
 
   // ── PNG to JPG ────────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('png-to-jpg-dropzone'),
-    document.getElementById('png-to-jpg-input')
-  );
+  fileUploadManagers.pngToJpg = initFileUploadManager({
+    dropzoneId: 'png-to-jpg-dropzone',
+    inputId: 'png-to-jpg-input',
+    previewId: 'png-to-jpg-preview',
+    acceptedTypes: ['image/png', '.png'],
+    allowMultiple: true
+  });
   document.getElementById('png-jpg-quality')?.addEventListener('input', e => {
     const label = document.getElementById('png-jpg-quality-label');
     if (label) label.textContent = e.target.value + '%';
@@ -1182,17 +1239,22 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('png-to-jpg-btn')?.addEventListener('click', handlePngToJpg);
 
   // ── JPG to PNG ────────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('jpg-to-png-dropzone'),
-    document.getElementById('jpg-to-png-input')
-  );
+  fileUploadManagers.jpgToPng = initFileUploadManager({
+    dropzoneId: 'jpg-to-png-dropzone',
+    inputId: 'jpg-to-png-input',
+    previewId: 'jpg-to-png-preview',
+    acceptedTypes: ['image/jpeg', '.jpg', '.jpeg'],
+    allowMultiple: true
+  });
   document.getElementById('jpg-to-png-btn')?.addEventListener('click', handleJpgToPng);
 
   // ── PDF to Text ────────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('pdf-to-text-dropzone'),
-    document.getElementById('pdf-to-text-input')
-  );
+  fileUploadManagers.pdfToText = initFileUploadManager({
+    dropzoneId: 'pdf-to-text-dropzone',
+    inputId: 'pdf-to-text-input',
+    previewId: 'pdf-to-text-preview',
+    acceptedTypes: ['application/pdf', '.pdf']
+  });
   document.getElementById('pdf-to-text-btn')?.addEventListener('click', handlePdfToText);
   document.getElementById('pdf-text-copy-btn')?.addEventListener('click', () => {
     copyToClipboard(document.getElementById('pdf-text-output')?.value || '');
@@ -1200,10 +1262,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pdf-text-download-btn')?.addEventListener('click', downloadPdfText);
 
   // ── Image Converter ────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('img-converter-dropzone'),
-    document.getElementById('img-converter-input')
-  );
+  fileUploadManagers.imageConverter = initFileUploadManager({
+    dropzoneId: 'img-converter-dropzone',
+    inputId: 'img-converter-input',
+    previewId: 'img-converter-preview',
+    acceptedTypes: ['image/*'],
+    onFileRemove: () => {
+      imageConverterFile = null;
+    }
+  });
   document.getElementById('img-converter-input')?.addEventListener('change', e => {
     imageConverterFile = e.target.files[0] || null;
   });
@@ -1213,10 +1280,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('img-converter-btn')?.addEventListener('click', handleImageConverter);
 
   // ── Media Converter ────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('media-dropzone'),
-    document.getElementById('media-input')
-  );
+  fileUploadManagers.media = initFileUploadManager({
+    dropzoneId: 'media-dropzone',
+    inputId: 'media-input',
+    previewId: 'media-preview',
+    acceptedTypes: ['video/*', 'audio/*']
+  });
   document.querySelectorAll('.media-fmt-btn').forEach(btn => {
     btn.addEventListener('click', () => setMediaFormat(btn.dataset.fmt));
   });
@@ -1231,6 +1300,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('file-size-input')?.addEventListener('change', handleFileSizeAnalyze);
 
   // ── Text Cleaner ────────────────────────────────────
+  fileUploadManagers.textCleaner = initFileUploadManager({
+    dropzoneId: 'text-cleaner-dropzone',
+    inputId: 'text-cleaner-input',
+    previewId: 'text-cleaner-preview-files',
+    acceptedTypes: ['text/plain', '.txt'],
+    onFileRemove: () => {
+      const preview = document.getElementById('text-cleaner-preview');
+      const status = document.getElementById('text-cleaner-status');
+      const download = document.getElementById('text-cleaner-download');
+      if (preview) preview.value = '';
+      if (status) status.textContent = '';
+      if (download) download.innerHTML = '';
+    }
+  });
   document.getElementById('text-cleaner-btn')?.addEventListener('click', handleTextClean);
   document.getElementById('text-cleaner-copy-btn')?.addEventListener('click', () => {
     copyToClipboard(document.getElementById('text-cleaner-preview')?.value || '');
@@ -1243,10 +1326,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── File Hash ─────────────────────────────────────────
-  setupDragAndDrop(
-    document.getElementById('hash-dropzone'),
-    document.getElementById('hash-file-input')
-  );
+  fileUploadManagers.fileHash = initFileUploadManager({
+    dropzoneId: 'hash-dropzone',
+    inputId: 'hash-file-input',
+    previewId: 'hash-preview'
+  });
   document.getElementById('hash-btn')?.addEventListener('click', handleFileHash);
   document.getElementById('hash-copy-btn')?.addEventListener('click', () => {
     copyToClipboard(document.getElementById('hash-output')?.textContent || '');
