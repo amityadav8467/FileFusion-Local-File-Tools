@@ -1087,9 +1087,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof FileUploadManager !== 'undefined') {
       return new FileUploadManager(config);
     }
+    const dropzone = document.getElementById(config.dropzoneId);
+    const input = document.getElementById(config.inputId);
+    if (!dropzone || !input) return null;
     setupDragAndDrop(
-      document.getElementById(config.dropzoneId),
-      document.getElementById(config.inputId)
+      dropzone,
+      input
     );
     return null;
   }
