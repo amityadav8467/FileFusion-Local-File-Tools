@@ -1117,7 +1117,9 @@ document.addEventListener('DOMContentLoaded', () => {
             filesToMerge.forEach(file => dt.items.add(file));
             const input = document.getElementById('pdf-merge-input');
             if (input) input.files = dt.files;
-          } catch (_) {}
+          } catch (error) {
+            console.warn('Unable to sync merged PDF files to input element', error);
+          }
         }
       } else {
         filesToMerge = selected;
