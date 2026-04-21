@@ -54,7 +54,7 @@
       </div>
 
       <!-- Preview -->
-      <img id="ci-preview" class="hidden max-h-48 mx-auto rounded-lg mb-6 shadow" alt="Preview">
+      <div id="ci-preview-container" class="file-upload-preview mb-6 hidden"></div>
 
       <!-- Controls -->
       <div class="space-y-5">
@@ -133,6 +133,7 @@
 
   <div id="toast-container"></div>
 
+  <script src="../js/file-upload.js"></script>
   <script>
     if (typeof feather !== 'undefined') feather.replace();
 
@@ -153,22 +154,26 @@
 
       let currentFile = null, origW = 0, origH = 0;
 
-      const dz = document.getElementById('ci-dropzone');
-      const inp = document.getElementById('ci-input');
-      ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
-      dz.addEventListener('dragleave', e => {
-        if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+      new FileUploadManager({
+        dropzoneId: 'ci-dropzone',
+        inputId: 'ci-input',
+        previewId: 'ci-preview-container',
+        acceptedTypes: ['image/*'],
+        onFileSelect: files => {
+          if (files[0]) onFileChange(files[0]);
+        },
+        onFileRemove: () => {
+          currentFile = null;
+          origW = 0;
+          origH = 0;
+          document.getElementById('ci-orig-size').textContent = '—';
+          document.getElementById('ci-new-size').textContent = '—';
+          document.getElementById('ci-ratio').textContent = '';
+          document.getElementById('ci-comparison').classList.add('hidden');
+          document.getElementById('ci-download').innerHTML = '';
+          document.getElementById('ci-status').textContent = '';
+        }
       });
-      dz.addEventListener('drop', e => {
-        e.preventDefault();
-        dz.classList.remove('drag-over');
-        const f = e.dataTransfer.files[0];
-        if (!f) return;
-        inp.files = e.dataTransfer.files;
-        onFileChange(f);
-      });
-      dz.addEventListener('click', e => { if (!e.target.closest('label')) inp.click(); });
-      inp.addEventListener('change', e => { if (e.target.files[0]) onFileChange(e.target.files[0]); });
 
       function onFileChange(file) {
         currentFile = file;
@@ -181,9 +186,6 @@
           URL.revokeObjectURL(url);
         };
         img.src = url;
-        const preview = document.getElementById('ci-preview');
-        preview.src = URL.createObjectURL(file);
-        preview.classList.remove('hidden');
         document.getElementById('ci-orig-size').textContent = fmt(file.size);
       }
 

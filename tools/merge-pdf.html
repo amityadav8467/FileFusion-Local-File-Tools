@@ -53,10 +53,8 @@
         </label>
       </div>
 
-      <!-- File List -->
-      <div id="merge-file-list" class="mb-4 space-y-1">
-        <p class="text-slate-400 text-sm">No files added yet.</p>
-      </div>
+      <!-- File Preview -->
+      <div id="merge-preview-container" class="file-upload-preview mb-4 hidden"></div>
 
       <!-- Actions -->
       <div class="flex gap-3 flex-wrap">
@@ -92,6 +90,7 @@
   <div id="toast-container"></div>
 
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../js/file-upload.js"></script>
   <script>
     // Inline minimal JS for this standalone page
     if (typeof feather !== 'undefined') feather.replace();
@@ -113,44 +112,33 @@
 
       let files = [];
 
-      function renderList() {
-        const list = document.getElementById('merge-file-list');
-        list.innerHTML = '';
-        if (!files.length) { list.innerHTML = '<p class="text-slate-400 text-sm">No files added yet.</p>'; return; }
-        files.forEach((f, i) => {
-          const d = document.createElement('div');
-          d.className = 'file-item';
-          const nameSpan = document.createElement('span');
-          nameSpan.className = 'file-name';
-          nameSpan.textContent = f.name;
-          const sizeSpan = document.createElement('span');
-          sizeSpan.className = 'text-xs text-slate-400';
-          sizeSpan.textContent = fmt(f.size);
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'ml-auto text-red-400 hover:text-red-600 text-xs';
-          removeBtn.textContent = '✕';
-          removeBtn.dataset.index = i;
-          removeBtn.addEventListener('click', () => { files.splice(Number(removeBtn.dataset.index), 1); renderList(); });
-          d.appendChild(nameSpan);
-          d.appendChild(sizeSpan);
-          d.appendChild(removeBtn);
-          list.appendChild(d);
-        });
-      }
-
-      const dz = document.getElementById('merge-dropzone');
-      const inp = document.getElementById('merge-input');
-      ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
-      dz.addEventListener('dragleave', e => {
-        if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+      let uploadManager;
+      uploadManager = new FileUploadManager({
+        dropzoneId: 'merge-dropzone',
+        inputId: 'merge-input',
+        previewId: 'merge-preview-container',
+        acceptedTypes: ['application/pdf', '.pdf'],
+        allowMultiple: true,
+        onFileSelect: selectedFiles => {
+          const selected = Array.from(selectedFiles);
+          if (files.length > 0) {
+            files = [...files, ...selected];
+            uploadManager.currentFiles = files;
+            uploadManager.displayFiles(files);
+            try {
+              const dt = new DataTransfer();
+              files.forEach(file => dt.items.add(file));
+              const input = document.getElementById('merge-input');
+              if (input) input.files = dt.files;
+            } catch (_) {}
+          } else {
+            files = selected;
+          }
+        },
+        onFileRemove: (_, remainingFiles) => {
+          files = Array.from(remainingFiles);
+        }
       });
-      dz.addEventListener('drop', e => {
-        e.preventDefault();
-        dz.classList.remove('drag-over');
-        Array.from(e.dataTransfer.files).forEach(f => files.push(f));
-        renderList();
-      });
-      inp.addEventListener('change', e => { Array.from(e.target.files).forEach(f=>files.push(f)); renderList(); });
 
       document.getElementById('merge-btn').addEventListener('click', async () => {
         if (files.length < 2) { toast('Add at least 2 PDF files.','warning'); return; }
@@ -180,7 +168,8 @@
       });
 
       document.getElementById('merge-clear-btn').addEventListener('click', () => {
-        files = []; renderList();
+        files = [];
+        uploadManager.clearFiles();
         document.getElementById('merge-download-area').innerHTML = '';
         document.getElementById('merge-status').textContent = '';
       });
